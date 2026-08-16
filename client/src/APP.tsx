@@ -1,36 +1,27 @@
 import { useState } from "react";
 import "./App.css";
 
+const API_URL = "https://smartprepai-5ujb.onrender.com";
+
 function App() {
-  // ================= CHAT =================
+  // ---------------- CHAT ----------------
   const [message, setMessage] = useState("");
   const [reply, setReply] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
 
-  // ================= RESUME =================
+  // ---------------- RESUME ----------------
   const [resume, setResume] = useState<File | null>(null);
   const [analysis, setAnalysis] = useState("");
   const [resumeLoading, setResumeLoading] = useState(false);
 
-  // ================= INTERVIEW GENERATOR =================
+  // ---------------- INTERVIEW ----------------
   const [topic, setTopic] = useState("DSA");
   const [difficulty, setDifficulty] = useState("Medium");
-  const [questionCount, setQuestionCount] = useState(5);
+  const [count, setCount] = useState(5);
   const [questions, setQuestions] = useState("");
   const [interviewLoading, setInterviewLoading] = useState(false);
 
-  // ================= MOCK INTERVIEW =================
-  const [mockTopic, setMockTopic] = useState("DSA");
-  const [mockDifficulty, setMockDifficulty] = useState("Medium");
-  const [mockQuestion, setMockQuestion] = useState("");
-  const [mockAnswer, setMockAnswer] = useState("");
-  const [evaluation, setEvaluation] = useState("");
-  const [mockLoading, setMockLoading] = useState(false);
-  const [evaluationLoading, setEvaluationLoading] = useState(false);
-  const [interviewStarted, setInterviewStarted] = useState(false);
-
-  // ================= CHAT =================
-
+  // ---------------- CHAT ----------------
   const sendMessage = async () => {
     if (!message.trim()) return;
 
@@ -38,7 +29,7 @@ function App() {
     setReply("");
 
     try {
-      const response = await fetch("http://localhost:5000/chat", {
+      const response = await fetch(`${API_URL}/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -63,8 +54,7 @@ function App() {
     }
   };
 
-  // ================= RESUME =================
-
+  // ---------------- RESUME ----------------
   const analyzeResume = async () => {
     if (!resume) return;
 
@@ -75,13 +65,10 @@ function App() {
       const formData = new FormData();
       formData.append("resume", resume);
 
-      const response = await fetch(
-        "http://localhost:5000/resume/analyze",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      const response = await fetch(`${API_URL}/resume/analyze`, {
+        method: "POST",
+        body: formData,
+      });
 
       const data = await response.json();
 
@@ -98,131 +85,36 @@ function App() {
     }
   };
 
-  // ================= INTERVIEW GENERATOR =================
-
-  const generateQuestions = async () => {
+  // ---------------- INTERVIEW GENERATOR ----------------
+  const generateInterview = async () => {
     setInterviewLoading(true);
     setQuestions("");
 
     try {
-      const response = await fetch(
-        "http://localhost:5000/interview/generate",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            topic,
-            difficulty,
-            count: questionCount,
-          }),
-        }
-      );
+      const response = await fetch(`${API_URL}/interview/generate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          topic,
+          difficulty,
+          count,
+        }),
+      });
 
       const data = await response.json();
 
       if (data.success) {
         setQuestions(data.questions);
       } else {
-        setQuestions(
-          data.message || "Failed to generate interview questions."
-        );
+        setQuestions(data.message || "Failed to generate questions.");
       }
     } catch (error) {
       console.error(error);
-      setQuestions(
-        "Unable to connect to the interview preparation service."
-      );
+      setQuestions("Unable to connect to the interview generator.");
     } finally {
       setInterviewLoading(false);
-    }
-  };
-
-  // ================= START MOCK INTERVIEW =================
-
-  const startMockInterview = async () => {
-    setMockLoading(true);
-    setMockQuestion("");
-    setMockAnswer("");
-    setEvaluation("");
-    setInterviewStarted(false);
-
-    try {
-      const response = await fetch(
-        "http://localhost:5000/mock-interview/start",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            topic: mockTopic,
-            difficulty: mockDifficulty,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        setMockQuestion(data.question);
-        setInterviewStarted(true);
-      } else {
-        setMockQuestion(
-          data.message || "Unable to start mock interview."
-        );
-      }
-    } catch (error) {
-      console.error(error);
-      setMockQuestion(
-        "Unable to connect to the mock interview service."
-      );
-    } finally {
-      setMockLoading(false);
-    }
-  };
-
-  // ================= EVALUATE ANSWER =================
-
-  const evaluateAnswer = async () => {
-    if (!mockAnswer.trim() || !mockQuestion) return;
-
-    setEvaluationLoading(true);
-    setEvaluation("");
-
-    try {
-      const response = await fetch(
-        "http://localhost:5000/mock-interview/evaluate",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            topic: mockTopic,
-            question: mockQuestion,
-            answer: mockAnswer,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        setEvaluation(data.evaluation);
-      } else {
-        setEvaluation(
-          data.message || "Answer evaluation failed."
-        );
-      }
-    } catch (error) {
-      console.error(error);
-      setEvaluation(
-        "Unable to connect to the evaluation service."
-      );
-    } finally {
-      setEvaluationLoading(false);
     }
   };
 
@@ -242,7 +134,6 @@ function App() {
 
         {/* HERO */}
         <section className="hero">
-
           <span className="badge">
             AI • PLACEMENT • PREPARATION
           </span>
@@ -257,25 +148,20 @@ function App() {
             Practice interviews, analyze your resume, and prepare
             for software engineering placements with AI.
           </p>
-
         </section>
 
-        {/* ================= CHAT ================= */}
-
+        {/* CHAT */}
         <section className="card">
 
           <div className="card-header">
-
             <div className="icon">🤖</div>
 
             <div>
               <h2>AI Placement Assistant</h2>
-
               <p>
                 Ask anything about DSA, DBMS, OS, OOP or interviews.
               </p>
             </div>
-
           </div>
 
           <textarea
@@ -289,41 +175,32 @@ function App() {
             onClick={sendMessage}
             disabled={chatLoading}
           >
-            {chatLoading
-              ? "Thinking..."
-              : "Ask SmartPrep AI →"}
+            {chatLoading ? "Thinking..." : "Ask SmartPrep AI →"}
           </button>
 
           {reply && (
             <div className="response-box">
-
               <div className="response-title">
                 🤖 SmartPrep AI
               </div>
 
               <p>{reply}</p>
-
             </div>
           )}
-
         </section>
 
-        {/* ================= RESUME ================= */}
-
+        {/* RESUME */}
         <section className="card">
 
           <div className="card-header">
-
             <div className="icon">📄</div>
 
             <div>
               <h2>AI Resume Analyzer</h2>
-
               <p>
                 Upload your resume and get an AI-powered ATS analysis.
               </p>
             </div>
-
           </div>
 
           <label className="upload-box">
@@ -333,35 +210,22 @@ function App() {
               accept=".pdf"
               onChange={(e) => {
                 const file = e.target.files?.[0] || null;
-
                 setResume(file);
                 setAnalysis("");
               }}
             />
 
-            <div className="upload-icon">
-              📁
-            </div>
+            <div className="upload-icon">📁</div>
 
             {resume ? (
               <>
-                <strong>
-                  {resume.name}
-                </strong>
-
-                <span>
-                  PDF selected successfully
-                </span>
+                <strong>{resume.name}</strong>
+                <span>PDF selected successfully</span>
               </>
             ) : (
               <>
-                <strong>
-                  Choose your resume
-                </strong>
-
-                <span>
-                  PDF files only • Maximum 5 MB
-                </span>
+                <strong>Choose your resume</strong>
+                <span>PDF files only • Maximum 5 MB</span>
               </>
             )}
 
@@ -379,7 +243,6 @@ function App() {
 
           {analysis && (
             <div className="analysis-box">
-
               <div className="response-title">
                 📊 Resume Analysis
               </div>
@@ -387,47 +250,32 @@ function App() {
               <div className="analysis-text">
                 {analysis}
               </div>
-
             </div>
           )}
-
         </section>
 
-        {/* ================= INTERVIEW GENERATOR ================= */}
-
+        {/* INTERVIEW GENERATOR */}
         <section className="card">
 
           <div className="card-header">
-
-            <div className="icon">
-              🎯
-            </div>
+            <div className="icon">🎯</div>
 
             <div>
-              <h2>
-                Interview Preparation
-              </h2>
-
+              <h2>AI Interview Generator</h2>
               <p>
-                Generate placement-focused interview questions using AI.
+                Generate placement interview questions using AI.
               </p>
             </div>
-
           </div>
 
           <div className="interview-controls">
 
-            <div className="control">
-
-              <label>
-                Topic
-              </label>
+            <div>
+              <label>Topic</label>
 
               <select
                 value={topic}
-                onChange={(e) =>
-                  setTopic(e.target.value)
-                }
+                onChange={(e) => setTopic(e.target.value)}
               >
                 <option value="DSA">DSA</option>
                 <option value="DBMS">DBMS</option>
@@ -438,59 +286,40 @@ function App() {
                 <option value="Computer Networks">
                   Computer Networks
                 </option>
-                <option value="JavaScript">
-                  JavaScript
-                </option>
-                <option value="System Design">
-                  System Design
-                </option>
               </select>
-
             </div>
 
-            <div className="control">
-
-              <label>
-                Difficulty
-              </label>
+            <div>
+              <label>Difficulty</label>
 
               <select
                 value={difficulty}
-                onChange={(e) =>
-                  setDifficulty(e.target.value)
-                }
+                onChange={(e) => setDifficulty(e.target.value)}
               >
                 <option value="Easy">Easy</option>
                 <option value="Medium">Medium</option>
                 <option value="Hard">Hard</option>
               </select>
-
             </div>
 
-            <div className="control">
-
-              <label>
-                Questions
-              </label>
+            <div>
+              <label>Questions</label>
 
               <select
-                value={questionCount}
-                onChange={(e) =>
-                  setQuestionCount(Number(e.target.value))
-                }
+                value={count}
+                onChange={(e) => setCount(Number(e.target.value))}
               >
                 <option value={3}>3</option>
                 <option value={5}>5</option>
                 <option value={10}>10</option>
               </select>
-
             </div>
 
           </div>
 
           <button
             className="primary-button"
-            onClick={generateQuestions}
+            onClick={generateInterview}
             disabled={interviewLoading}
           >
             {interviewLoading
@@ -499,8 +328,7 @@ function App() {
           </button>
 
           {questions && (
-            <div className="analysis-box">
-
+            <div className="response-box">
               <div className="response-title">
                 🎯 Interview Questions
               </div>
@@ -508,162 +336,17 @@ function App() {
               <div className="analysis-text">
                 {questions}
               </div>
-
-            </div>
-          )}
-
-        </section>
-
-        {/* ================= MOCK INTERVIEW ================= */}
-
-        <section className="card">
-
-          <div className="card-header">
-
-            <div className="icon">
-              🎤
-            </div>
-
-            <div>
-              <h2>
-                AI Mock Interview
-              </h2>
-
-              <p>
-                Practice technical interviews and receive AI feedback.
-              </p>
-            </div>
-
-          </div>
-
-          <div className="interview-controls">
-
-            <div className="control">
-
-              <label>
-                Topic
-              </label>
-
-              <select
-                value={mockTopic}
-                onChange={(e) =>
-                  setMockTopic(e.target.value)
-                }
-              >
-                <option value="DSA">DSA</option>
-                <option value="DBMS">DBMS</option>
-                <option value="Operating Systems">
-                  Operating Systems
-                </option>
-                <option value="OOP">OOP</option>
-                <option value="Computer Networks">
-                  Computer Networks
-                </option>
-                <option value="JavaScript">
-                  JavaScript
-                </option>
-              </select>
-
-            </div>
-
-            <div className="control">
-
-              <label>
-                Difficulty
-              </label>
-
-              <select
-                value={mockDifficulty}
-                onChange={(e) =>
-                  setMockDifficulty(e.target.value)
-                }
-              >
-                <option value="Easy">Easy</option>
-                <option value="Medium">Medium</option>
-                <option value="Hard">Hard</option>
-              </select>
-
-            </div>
-
-          </div>
-
-          <button
-            className="primary-button"
-            onClick={startMockInterview}
-            disabled={mockLoading}
-          >
-            {mockLoading
-              ? "Starting Interview..."
-              : "Start Mock Interview →"}
-          </button>
-
-          {mockQuestion && (
-            <div className="response-box">
-
-              <div className="response-title">
-                🤖 Interviewer
-              </div>
-
-              <p>
-                {mockQuestion}
-              </p>
-
-            </div>
-          )}
-
-          {interviewStarted && (
-            <>
-              <textarea
-                className="mock-answer"
-                value={mockAnswer}
-                onChange={(e) =>
-                  setMockAnswer(e.target.value)
-                }
-                placeholder="Type your answer here..."
-              />
-
-              <button
-                className="primary-button"
-                onClick={evaluateAnswer}
-                disabled={
-                  !mockAnswer.trim() ||
-                  evaluationLoading
-                }
-              >
-                {evaluationLoading
-                  ? "Evaluating Answer..."
-                  : "Submit Answer →"}
-              </button>
-            </>
-          )}
-
-          {evaluation && (
-            <div className="analysis-box">
-
-              <div className="response-title">
-                📊 AI Evaluation
-              </div>
-
-              <div className="analysis-text">
-                {evaluation}
-              </div>
-
             </div>
           )}
 
         </section>
 
         {/* FEATURES */}
-
         <section className="features">
 
           <div className="feature">
             <div>💬</div>
-
-            <h3>
-              AI Chat
-            </h3>
-
+            <h3>AI Chat</h3>
             <p>
               Get instant explanations for placement preparation.
             </p>
@@ -671,25 +354,17 @@ function App() {
 
           <div className="feature">
             <div>📄</div>
-
-            <h3>
-              Resume Analysis
-            </h3>
-
+            <h3>Resume Analysis</h3>
             <p>
               Identify resume strengths, gaps and ATS improvements.
             </p>
           </div>
 
           <div className="feature">
-            <div>🎤</div>
-
-            <h3>
-              Mock Interviews
-            </h3>
-
+            <div>🎯</div>
+            <h3>Interview Prep</h3>
             <p>
-              Practice technical interviews and receive AI feedback.
+              Generate technical software engineering interview questions.
             </p>
           </div>
 
@@ -697,6 +372,7 @@ function App() {
 
       </main>
 
+      {/* FOOTER */}
       <footer>
         <p>
           SmartPrep AI • Built for smarter placement preparation
