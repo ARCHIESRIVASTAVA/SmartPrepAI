@@ -28,39 +28,34 @@ router.post("/", async (req, res) => {
 
     const { message } = req.body;
 
-    if (!message) {
-      console.log("❌ No message received");
-
+    if (!message || typeof message !== "string") {
       return res.status(400).json({
         success: false,
         message: "Message is required",
       });
     }
 
-    console.log("🤖 Sending request to Gemini...");
+    console.log("🤖 Sending request to Gemini 3.6 Flash...");
 
-    const response = await ai.models.generateContent({
+    const interaction = await ai.interactions.create({
       model: "gemini-3.6-flash",
-      contents: message,
+      input: message,
     });
 
-    console.log("✅ Gemini Response:", response.text);
+    const reply = interaction.output_text;
+
+    console.log("✅ Gemini Response:", reply);
 
     return res.status(200).json({
       success: true,
-      reply: response.text,
+      reply,
     });
-
   } catch (error: any) {
-
-    console.log("❌ GEMINI ERROR START");
-    console.error(error);
-    console.log("❌ GEMINI ERROR END");
+    console.error("❌ GEMINI ERROR:", error);
 
     return res.status(500).json({
       success: false,
-      message: error?.message || "Unknown Error",
-      error,
+      message: error?.message || "Gemini API request failed",
     });
   }
 });
