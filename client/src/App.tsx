@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "./App.css";
 
-const API_URL = "http://localhost:5000";
+const API_URL = "https://smartprepai-5ujb.onrender.com";
 
 type Source = {
   source: string;
@@ -20,13 +20,18 @@ function formatAIResponse(text: string) {
   const flushCode = () => {
     if (codeBuffer.length > 0) {
       elements.push(
-        <pre className="code-block" key={`code-${elements.length}`}>
+        <pre
+          className="code-block"
+          key={`code-${elements.length}`}
+        >
           <div className="code-header">
             <span>{codeLanguage || "code"}</span>
           </div>
+
           <code>{codeBuffer.join("\n")}</code>
         </pre>
       );
+
       codeBuffer = [];
     }
   };
@@ -40,8 +45,10 @@ function formatAIResponse(text: string) {
         flushCode();
       } else {
         inCode = true;
-        codeLanguage = trimmed.replace("```", "") || "code";
+        codeLanguage =
+          trimmed.replace("```", "") || "code";
       }
+
       return;
     }
 
@@ -52,62 +59,99 @@ function formatAIResponse(text: string) {
 
     if (!trimmed) {
       elements.push(
-        <div className="answer-space" key={`space-${index}`} />
+        <div
+          className="answer-space"
+          key={`space-${index}`}
+        />
       );
+
       return;
     }
 
     if (trimmed.startsWith("### ")) {
       elements.push(
-        <h3 className="answer-heading" key={index}>
+        <h3
+          className="answer-heading"
+          key={index}
+        >
           {trimmed.replace("### ", "")}
         </h3>
       );
+
       return;
     }
 
     if (trimmed.startsWith("## ")) {
       elements.push(
-        <h2 className="answer-heading" key={index}>
+        <h2
+          className="answer-heading"
+          key={index}
+        >
           {trimmed.replace("## ", "")}
         </h2>
       );
+
       return;
     }
 
     if (trimmed === "---") {
       elements.push(
-        <hr className="answer-divider" key={index} />
+        <hr
+          className="answer-divider"
+          key={index}
+        />
       );
+
       return;
     }
 
     if (/^[-*]\s/.test(trimmed)) {
       elements.push(
-        <div className="bullet-item" key={index}>
+        <div
+          className="bullet-item"
+          key={index}
+        >
           <span>•</span>
-          <span>{formatInline(trimmed.slice(2))}</span>
+
+          <span>
+            {formatInline(trimmed.slice(2))}
+          </span>
         </div>
       );
+
       return;
     }
 
     if (/^\d+\.\s/.test(trimmed)) {
-      const match = trimmed.match(/^(\d+)\.\s(.+)/);
+      const match = trimmed.match(
+        /^(\d+)\.\s(.+)/
+      );
 
       if (match) {
         elements.push(
-          <div className="number-item" key={index}>
-            <span className="number-badge">{match[1]}</span>
-            <span>{formatInline(match[2])}</span>
+          <div
+            className="number-item"
+            key={index}
+          >
+            <span className="number-badge">
+              {match[1]}
+            </span>
+
+            <span>
+              {formatInline(match[2])}
+            </span>
           </div>
         );
+
         return;
       }
     }
 
     elements.push(
-      <p className="answer-paragraph" key={index}>
+      <p
+        className="answer-paragraph"
+        key={index}
+      >
         {formatInline(trimmed)}
       </p>
     );
@@ -121,10 +165,15 @@ function formatAIResponse(text: string) {
 }
 
 function formatInline(text: string) {
-  const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
+  const parts = text.split(
+    /(\*\*.*?\*\*|`.*?`)/g
+  );
 
   return parts.map((part, index) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
+    if (
+      part.startsWith("**") &&
+      part.endsWith("**")
+    ) {
       return (
         <strong key={index}>
           {part.slice(2, -2)}
@@ -132,9 +181,15 @@ function formatInline(text: string) {
       );
     }
 
-    if (part.startsWith("`") && part.endsWith("`")) {
+    if (
+      part.startsWith("`") &&
+      part.endsWith("`")
+    ) {
       return (
-        <code className="inline-code" key={index}>
+        <code
+          className="inline-code"
+          key={index}
+        >
           {part.slice(1, -1)}
         </code>
       );
@@ -146,24 +201,34 @@ function formatInline(text: string) {
 
 function App() {
   // ---------------- CHAT ----------------
+
   const [message, setMessage] = useState("");
   const [reply, setReply] = useState("");
-  const [sources, setSources] = useState<Source[]>([]);
-  const [chatLoading, setChatLoading] = useState(false);
+  const [sources, setSources] =
+    useState<Source[]>([]);
+  const [chatLoading, setChatLoading] =
+    useState(false);
 
   // ---------------- RESUME ----------------
-  const [resume, setResume] = useState<File | null>(null);
+
+  const [resume, setResume] =
+    useState<File | null>(null);
   const [analysis, setAnalysis] = useState("");
-  const [resumeLoading, setResumeLoading] = useState(false);
+  const [resumeLoading, setResumeLoading] =
+    useState(false);
 
   // ---------------- INTERVIEW ----------------
+
   const [topic, setTopic] = useState("DSA");
-  const [difficulty, setDifficulty] = useState("Medium");
+  const [difficulty, setDifficulty] =
+    useState("Medium");
   const [count, setCount] = useState(5);
   const [questions, setQuestions] = useState("");
-  const [interviewLoading, setInterviewLoading] = useState(false);
+  const [interviewLoading, setInterviewLoading] =
+    useState(false);
 
   // ---------------- CHAT ----------------
+
   const sendMessage = async () => {
     if (!message.trim()) return;
 
@@ -172,15 +237,18 @@ function App() {
     setSources([]);
 
     try {
-      const response = await fetch(`${API_URL}/chat`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: message.trim(),
-        }),
-      });
+      const response = await fetch(
+        `${API_URL}/chat`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: message.trim(),
+          }),
+        }
+      );
 
       const data = await response.json();
 
@@ -188,12 +256,16 @@ function App() {
         setReply(data.reply || "");
         setSources(data.sources || []);
       } else {
-        setReply(data.message || "Something went wrong.");
+        setReply(
+          data.message ||
+            "Something went wrong."
+        );
       }
     } catch (error) {
       console.error(error);
+
       setReply(
-        "Unable to connect to SmartPrep AI. Please make sure the backend is running."
+        "Unable to connect to SmartPrep AI. Please try again."
       );
     } finally {
       setChatLoading(false);
@@ -201,6 +273,7 @@ function App() {
   };
 
   // ---------------- RESUME ----------------
+
   const analyzeResume = async () => {
     if (!resume) return;
 
@@ -209,6 +282,7 @@ function App() {
 
     try {
       const formData = new FormData();
+
       formData.append("resume", resume);
 
       const response = await fetch(
@@ -225,11 +299,13 @@ function App() {
         setAnalysis(data.analysis);
       } else {
         setAnalysis(
-          data.message || "Resume analysis failed."
+          data.message ||
+            "Resume analysis failed."
         );
       }
     } catch (error) {
       console.error(error);
+
       setAnalysis(
         "Unable to connect to the resume analyzer."
       );
@@ -239,6 +315,7 @@ function App() {
   };
 
   // ---------------- INTERVIEW ----------------
+
   const generateInterview = async () => {
     setInterviewLoading(true);
     setQuestions("");
@@ -271,6 +348,7 @@ function App() {
       }
     } catch (error) {
       console.error(error);
+
       setQuestions(
         "Unable to connect to the interview generator."
       );
@@ -283,19 +361,22 @@ function App() {
     <div className="app">
 
       {/* HEADER */}
+
       <header className="header">
         <div className="logo">
           🚀 SmartPrep AI
         </div>
 
         <p>
-          Your AI-powered placement preparation assistant
+          Your AI-powered placement preparation
+          assistant
         </p>
       </header>
 
       <main className="main">
 
         {/* HERO */}
+
         <section className="hero">
           <span className="badge">
             AI • PLACEMENT • PREPARATION
@@ -315,16 +396,22 @@ function App() {
         </section>
 
         {/* CHAT */}
+
         <section className="card chat-card">
 
           <div className="card-header">
-            <div className="icon">🤖</div>
+            <div className="icon">
+              🤖
+            </div>
 
             <div>
-              <h2>AI Placement Assistant</h2>
+              <h2>
+                AI Placement Assistant
+              </h2>
+
               <p>
-                Ask anything about DSA, DBMS, OS, OOP
-                or interviews.
+                Ask anything about DSA, DBMS, OS,
+                OOP or interviews.
               </p>
             </div>
           </div>
@@ -349,14 +436,18 @@ function App() {
 
           {chatLoading && (
             <div className="loading-box">
+
               <div className="loading-dots">
                 <span></span>
                 <span></span>
                 <span></span>
               </div>
+
               <span>
-                Searching your study material and generating an answer...
+                Searching your study material and
+                generating an answer...
               </span>
+
             </div>
           )}
 
@@ -364,11 +455,19 @@ function App() {
             <div className="ai-response">
 
               <div className="response-top">
-                <div className="ai-avatar">🤖</div>
+
+                <div className="ai-avatar">
+                  🤖
+                </div>
 
                 <div>
-                  <strong>SmartPrep AI</strong>
-                  <span>AI-powered answer</span>
+                  <strong>
+                    SmartPrep AI
+                  </strong>
+
+                  <span>
+                    AI-powered answer
+                  </span>
                 </div>
 
                 {sources.length > 0 && (
@@ -376,6 +475,7 @@ function App() {
                     ✦ RAG
                   </div>
                 )}
+
               </div>
 
               <div className="answer-content">
@@ -384,32 +484,41 @@ function App() {
 
               {sources.length > 0 && (
                 <div className="sources-section">
+
                   <div className="sources-title">
+
                     📚 Based on your study material
+
                     <span>
                       {sources.length} sources
                     </span>
+
                   </div>
 
                   <div className="sources-list">
+
                     {sources.map(
                       (source, index) => (
                         <div
                           className="source-card"
                           key={`${source.source}-${source.chunkIndex}-${index}`}
                         >
+
                           <div className="source-icon">
                             📄
                           </div>
 
                           <div className="source-info">
+
                             <strong>
                               {source.source}
                             </strong>
 
                             <small>
-                              Study material • Relevant section
+                              Study material •
+                              Relevant section
                             </small>
+
                           </div>
 
                           <div className="score">
@@ -418,10 +527,13 @@ function App() {
                             )}
                             %
                           </div>
+
                         </div>
                       )
                     )}
+
                   </div>
+
                 </div>
               )}
 
@@ -431,18 +543,28 @@ function App() {
         </section>
 
         {/* RESUME */}
+
         <section className="card">
 
           <div className="card-header">
-            <div className="icon">📄</div>
+
+            <div className="icon">
+              📄
+            </div>
 
             <div>
-              <h2>AI Resume Analyzer</h2>
+
+              <h2>
+                AI Resume Analyzer
+              </h2>
+
               <p>
                 Upload your resume and get an
                 AI-powered ATS analysis.
               </p>
+
             </div>
+
           </div>
 
           <label className="upload-box">
@@ -451,24 +573,37 @@ function App() {
               type="file"
               accept=".pdf"
               onChange={(e) => {
+
                 const file =
-                  e.target.files?.[0] || null;
+                  e.target.files?.[0] ||
+                  null;
 
                 setResume(file);
                 setAnalysis("");
+
               }}
             />
 
-            <div className="upload-icon">📁</div>
+            <div className="upload-icon">
+              📁
+            </div>
 
             {resume ? (
               <>
-                <strong>{resume.name}</strong>
-                <span>PDF selected successfully</span>
+                <strong>
+                  {resume.name}
+                </strong>
+
+                <span>
+                  PDF selected successfully
+                </span>
               </>
             ) : (
               <>
-                <strong>Choose your resume</strong>
+                <strong>
+                  Choose your resume
+                </strong>
+
                 <span>
                   PDF files only • Maximum 5 MB
                 </span>
@@ -480,7 +615,9 @@ function App() {
           <button
             className="primary-button"
             onClick={analyzeResume}
-            disabled={!resume || resumeLoading}
+            disabled={
+              !resume || resumeLoading
+            }
           >
             {resumeLoading
               ? "Analyzing Resume..."
@@ -489,6 +626,7 @@ function App() {
 
           {analysis && (
             <div className="response-box">
+
               <div className="response-title">
                 📊 Resume Analysis
               </div>
@@ -496,30 +634,44 @@ function App() {
               <div className="analysis-text">
                 {analysis}
               </div>
+
             </div>
           )}
 
         </section>
 
         {/* INTERVIEW */}
+
         <section className="card">
 
           <div className="card-header">
-            <div className="icon">🎯</div>
+
+            <div className="icon">
+              🎯
+            </div>
 
             <div>
-              <h2>AI Interview Generator</h2>
+
+              <h2>
+                AI Interview Generator
+              </h2>
+
               <p>
-                Generate placement interview questions
-                using AI.
+                Generate placement interview
+                questions using AI.
               </p>
+
             </div>
+
           </div>
 
           <div className="interview-controls">
 
             <div>
-              <label>Topic</label>
+
+              <label>
+                Topic
+              </label>
 
               <select
                 value={topic}
@@ -527,20 +679,36 @@ function App() {
                   setTopic(e.target.value)
                 }
               >
-                <option value="DSA">DSA</option>
-                <option value="DBMS">DBMS</option>
+
+                <option value="DSA">
+                  DSA
+                </option>
+
+                <option value="DBMS">
+                  DBMS
+                </option>
+
                 <option value="Operating Systems">
                   Operating Systems
                 </option>
-                <option value="OOP">OOP</option>
+
+                <option value="OOP">
+                  OOP
+                </option>
+
                 <option value="Computer Networks">
                   Computer Networks
                 </option>
+
               </select>
+
             </div>
 
             <div>
-              <label>Difficulty</label>
+
+              <label>
+                Difficulty
+              </label>
 
               <select
                 value={difficulty}
@@ -548,25 +716,52 @@ function App() {
                   setDifficulty(e.target.value)
                 }
               >
-                <option value="Easy">Easy</option>
-                <option value="Medium">Medium</option>
-                <option value="Hard">Hard</option>
+
+                <option value="Easy">
+                  Easy
+                </option>
+
+                <option value="Medium">
+                  Medium
+                </option>
+
+                <option value="Hard">
+                  Hard
+                </option>
+
               </select>
+
             </div>
 
             <div>
-              <label>Questions</label>
+
+              <label>
+                Questions
+              </label>
 
               <select
                 value={count}
                 onChange={(e) =>
-                  setCount(Number(e.target.value))
+                  setCount(
+                    Number(e.target.value)
+                  )
                 }
               >
-                <option value={3}>3</option>
-                <option value={5}>5</option>
-                <option value={10}>10</option>
+
+                <option value={3}>
+                  3
+                </option>
+
+                <option value={5}>
+                  5
+                </option>
+
+                <option value={10}>
+                  10
+                </option>
+
               </select>
+
             </div>
 
           </div>
@@ -583,6 +778,7 @@ function App() {
 
           {questions && (
             <div className="response-box">
+
               <div className="response-title">
                 🎯 Interview Questions
               </div>
@@ -590,39 +786,65 @@ function App() {
               <div className="analysis-text">
                 {questions}
               </div>
+
             </div>
           )}
 
         </section>
 
         {/* FEATURES */}
+
         <section className="features">
 
           <div className="feature">
-            <div>💬</div>
-            <h3>AI Chat</h3>
+
+            <div>
+              💬
+            </div>
+
+            <h3>
+              AI Chat
+            </h3>
+
             <p>
               Get instant explanations for
               placement preparation.
             </p>
+
           </div>
 
           <div className="feature">
-            <div>📄</div>
-            <h3>Resume Analysis</h3>
+
+            <div>
+              📄
+            </div>
+
+            <h3>
+              Resume Analysis
+            </h3>
+
             <p>
               Identify resume strengths, gaps
               and ATS improvements.
             </p>
+
           </div>
 
           <div className="feature">
-            <div>🎯</div>
-            <h3>Interview Prep</h3>
+
+            <div>
+              🎯
+            </div>
+
+            <h3>
+              Interview Prep
+            </h3>
+
             <p>
               Generate technical software
               engineering interview questions.
             </p>
+
           </div>
 
         </section>
@@ -630,10 +852,12 @@ function App() {
       </main>
 
       <footer>
+
         <p>
           SmartPrep AI • Built for smarter
           placement preparation
         </p>
+
       </footer>
 
     </div>
