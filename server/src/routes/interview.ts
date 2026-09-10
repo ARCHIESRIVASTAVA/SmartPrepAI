@@ -6,7 +6,7 @@ dotenv.config();
 
 const router = Router();
 
-console.log("🚀 interview.ts loaded");
+console.log("🚀 NEW interview.ts loaded");
 
 const apiKey = process.env.GEMINI_API_KEY;
 
@@ -20,7 +20,10 @@ const ai = new GoogleGenAI({
   apiKey,
 });
 
-// Generate Interview Questions
+// ================================
+// GENERATE INTERVIEW QUESTIONS
+// ================================
+
 router.post("/generate", async (req, res) => {
   console.log("🎯 /interview/generate route hit");
 
@@ -41,6 +44,7 @@ You are an expert software engineering interviewer.
 Generate ${count} placement interview questions.
 
 Topic: ${topic}
+
 Difficulty: ${difficulty}
 
 Requirements:
@@ -54,28 +58,32 @@ Requirements:
 Return only the questions.
 `;
 
-    console.log("🤖 Sending request to Gemini...");
+    console.log("🤖 Calling Gemini Interactions API...");
 
-    const response = await ai.models.generateContent({
+    const interaction = await ai.interactions.create({
       model: "gemini-3.6-flash",
-      contents: prompt,
+      input: prompt,
     });
 
-    console.log("✅ Interview questions generated");
+    const questions = interaction.output_text;
+
+    console.log("✅ Interview questions generated successfully");
 
     return res.status(200).json({
       success: true,
       topic,
       difficulty,
       count,
-      questions: response.text,
+      questions,
     });
+
   } catch (error: any) {
     console.error("❌ INTERVIEW ERROR:", error);
 
     return res.status(500).json({
       success: false,
-      message: error?.message || "Failed to generate questions",
+      message:
+        error?.message || "Failed to generate interview questions",
     });
   }
 });
