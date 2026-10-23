@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import "./App.css";
 
 const API_URL = "https://smartprepai-5ujb.onrender.com";
@@ -11,7 +11,7 @@ type Source = {
 
 function formatAIResponse(text: string) {
   const lines = text.split("\n");
-  const elements: JSX.Element[] = [];
+  const elements: ReactElement[] = [];
 
   let codeBuffer: string[] = [];
   let inCode = false;
@@ -227,6 +227,39 @@ function App() {
   const [interviewLoading, setInterviewLoading] =
     useState(false);
 
+  // ---------------- SERVER WARM-UP ----------------
+  // The Render free tier sleeps after ~15 minutes idle.
+  // Ping it as soon as the page opens so it wakes up while the
+  // user is reading, and tell them if it's taking a while.
+
+  const [serverWaking, setServerWaking] =
+    useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    // Only show the message if the ping is actually slow,
+    // so a warm server never flashes a banner.
+    const slowTimer = setTimeout(() => {
+      if (!cancelled) setServerWaking(true);
+    }, 2000);
+
+    fetch(`${API_URL}/`)
+      .catch(() => {
+        // If the ping fails, the real requests will
+        // show their own error messages.
+      })
+      .finally(() => {
+        clearTimeout(slowTimer);
+        if (!cancelled) setServerWaking(false);
+      });
+
+    return () => {
+      cancelled = true;
+      clearTimeout(slowTimer);
+    };
+  }, []);
+
   // ---------------- CHAT ----------------
 
   const sendMessage = async () => {
@@ -372,6 +405,21 @@ function App() {
           assistant
         </p>
       </header>
+
+      {serverWaking && (
+        <div className="server-status" role="status">
+          <div className="loading-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+
+          <span>
+            Waking up the server... this can take up
+            to a minute after a period of inactivity.
+          </span>
+        </div>
+      )}
 
       <main className="main">
 

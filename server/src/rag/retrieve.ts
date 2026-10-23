@@ -32,9 +32,12 @@ export async function retrieveRelevantChunks(
   /*
    * Convert the user's question into an embedding.
    */
-  const embeddings = await createEmbeddings([
-    query,
-  ]);
+  // Fail fast for user-facing requests: at most 2 attempts
+  // with a 1s wait, instead of the ingestion default (up to ~75s).
+  const embeddings = await createEmbeddings(
+    [query],
+    { maxRetries: 2, baseDelayMs: 1000 }
+  );
 
   const queryEmbedding = embeddings[0];
 

@@ -617,3 +617,22 @@ footer {
     padding: 17px;
   }
 }
+/* SERVER WARM-UP BANNER */
+
+.server-status {
+  width: min(920px, calc(100% - 32px));
+  margin: 0 auto 16px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: #fff8e6;
+  border: 1px solid #f3dfa2;
+  color: #7a5b00;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.server-status .loading-dots span {
+  background: #c99700;
+}
