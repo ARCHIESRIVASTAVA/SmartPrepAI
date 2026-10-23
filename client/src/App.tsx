@@ -199,6 +199,96 @@ function formatInline(text: string) {
   });
 }
 
+// ---------------- STREAMING CHAT ----------------
+// Reads Server-Sent Events from POST /chat/stream and reports
+// each piece to the caller as it arrives.
+
+type StreamHandlers = {
+  onMeta: (meta: { sources: Source[] }) => void;
+  onToken: (text: string) => void;
+  onError: (message: string) => void;
+};
+
+// Throws if the stream could not be started or broke before
+// any text arrived, so the caller can fall back to POST /chat.
+// Errors the server reports itself go to onError instead.
+async function streamChat(
+  message: string,
+  handlers: StreamHandlers
+): Promise<void> {
+  const response = await fetch(`${API_URL}/chat/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message }),
+  });
+
+  if (!response.ok || !response.body) {
+    throw new Error(`Stream failed (${response.status})`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+
+  let buffer = "";
+  let receivedText = false;
+  let finished = false;
+
+  const handleEvent = (raw: string) => {
+    let event = "message";
+    let data = "";
+
+    for (const line of raw.split("\n")) {
+      if (line.startsWith("event:")) {
+        event = line.slice(6).trim();
+      } else if (line.startsWith("data:")) {
+        data += line.slice(5).trim();
+      }
+    }
+
+    if (!data) return;
+
+    const payload = JSON.parse(data);
+
+    if (event === "meta") {
+      handlers.onMeta({ sources: payload.sources || [] });
+    } else if (event === "token") {
+      receivedText = true;
+      handlers.onToken(payload.text || "");
+    } else if (event === "done") {
+      finished = true;
+    } else if (event === "error") {
+      finished = true;
+      handlers.onError(
+        payload.message || "Something went wrong."
+      );
+    }
+  };
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // SSE events are separated by a blank line.
+      const parts = buffer.split("\n\n");
+      buffer = parts.pop() || "";
+
+      parts.forEach(handleEvent);
+    }
+  } catch (error) {
+    // Connection dropped mid-stream. Keep what we have if any
+    // text arrived; otherwise let the caller fall back.
+    if (!receivedText) throw error;
+  }
+
+  if (!finished && !receivedText) {
+    throw new Error("Stream ended without a response");
+  }
+}
+
 function App() {
   // ---------------- CHAT ----------------
 
@@ -270,36 +360,60 @@ function App() {
     setSources([]);
 
     try {
-      const response = await fetch(
-        `${API_URL}/chat`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            message: message.trim(),
-          }),
-        }
+      // Preferred path: stream the answer as it is generated.
+      await streamChat(message.trim(), {
+        onMeta: (meta) => setSources(meta.sources),
+        onToken: (text) =>
+          setReply((previous) => previous + text),
+        onError: (errorMessage) => {
+          // If part of an answer already arrived, keep it and
+          // add the error underneath instead of hiding it.
+          setReply((previous) =>
+            previous
+              ? `${previous}\n\n${errorMessage}`
+              : errorMessage
+          );
+        },
+      });
+    } catch (streamError) {
+      console.error(
+        "Streaming failed, using standard request:",
+        streamError
       );
 
-      const data = await response.json();
+      // Fallback path: the original single-response request.
+      try {
+        const response = await fetch(
+          `${API_URL}/chat`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              message: message.trim(),
+            }),
+          }
+        );
 
-      if (data.success) {
-        setReply(data.reply || "");
-        setSources(data.sources || []);
-      } else {
+        const data = await response.json();
+
+        if (data.success) {
+          setReply(data.reply || "");
+          setSources(data.sources || []);
+        } else {
+          setReply(
+            data.message ||
+              "Something went wrong."
+          );
+        }
+      } catch (error) {
+        console.error(error);
+
         setReply(
-          data.message ||
-            "Something went wrong."
+          "Unable to connect to SmartPrep AI. Please try again."
         );
       }
-    } catch (error) {
-      console.error(error);
-
-      setReply(
-        "Unable to connect to SmartPrep AI. Please try again."
-      );
     } finally {
       setChatLoading(false);
     }
@@ -482,7 +596,7 @@ function App() {
               : "Ask SmartPrep AI →"}
           </button>
 
-          {chatLoading && (
+          {chatLoading && !reply && (
             <div className="loading-box">
 
               <div className="loading-dots">
@@ -499,7 +613,7 @@ function App() {
             </div>
           )}
 
-          {reply && !chatLoading && (
+          {reply && (
             <div className="ai-response">
 
               <div className="response-top">
@@ -530,7 +644,7 @@ function App() {
                 {formatAIResponse(reply)}
               </div>
 
-              {sources.length > 0 && (
+              {sources.length > 0 && !chatLoading && (
                 <div className="sources-section">
 
                   <div className="sources-title">
