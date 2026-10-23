@@ -7,7 +7,7 @@ dotenv.config();
 
 const router = Router();
 
-console.log("🔥 SMARTPREP AI RAG + GOOGLE SEARCH ROUTE LOADED");
+console.log("🚀 SMARTPREP AI RAG + GOOGLE SEARCH ROUTE LOADED");
 
 const apiKey = process.env.GEMINI_API_KEY;
 
@@ -17,38 +17,55 @@ if (!apiKey) {
 
 const ai = new GoogleGenAI({ apiKey });
 
-// Initial threshold; tune it using actual retrieval results.
+// Starting threshold; tune this using actual retrieval tests.
 const RELEVANCE_THRESHOLD = 0.62;
+
+type SourceType = "study_material" | "web";
+
+interface WebSource {
+  title: string;
+  url: string;
+}
 
 router.post("/", async (req, res) => {
   try {
     const { message } = req.body;
 
-    console.log("=================================");
+    console.log("====================================");
     console.log("🔥 NEW SMARTPREP CHAT REQUEST");
     console.log("Question:", message);
 
-    // 1. Validate the question
-    if (!message || typeof message !== "string" || !message.trim()) {
+    // 1. Validate the request.
+    if (
+      typeof message !== "string" ||
+      !message.trim()
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Message is required",
+        message: "Please provide a valid question.",
       });
     }
 
-    // 2. Search the Pinecone knowledge base
+    const question = message.trim();
+
+    // 2. Retrieve relevant chunks from Pinecone.
     console.log("🔎 Searching Pinecone...");
 
     const retrievedChunks = await retrieveRelevantChunks(
-      message.trim(),
+      question,
       5
     );
 
-    console.log("📚 Retrieved chunks:", retrievedChunks.length);
+    console.log(
+      "📚 Retrieved chunks:",
+      retrievedChunks.length
+    );
 
-    // 3. Check whether the retrieved material is relevant enough
+    // 3. Determine whether the retrieved material
+    // is relevant enough to use as the primary source.
     const bestScore = retrievedChunks.reduce(
-      (highest, chunk) => Math.max(highest, chunk.score),
+      (highest, chunk) =>
+        Math.max(highest, chunk.score),
       0
     );
 
@@ -62,47 +79,47 @@ router.post("/", async (req, res) => {
       useStudyMaterial
     );
 
-    // 4. Prepare the study material context
+    // 4. Prepare the retrieved context.
     const context = retrievedChunks
       .map(
-        (chunk, i) => `
-SOURCE ${i + 1}
+        (chunk, index) => `
+SOURCE ${index + 1}
 FILE: ${chunk.source}
 CHUNK: ${chunk.chunkIndex}
-RELEVANCE SCORE: ${chunk.score}
 
 ${chunk.text}
 `
       )
       .join("\n--------------------\n");
 
-    let interaction: any;
-    let sourceType: "study_material" | "web" | "study_material_and_web";
     let reply = "";
-    const webSources: { title: string; url: string }[] = [];
+    let sourceType: SourceType;
 
-    // ==================================================
-    // PATH A: Relevant information exists in the PDFs
-    // ==================================================
+    const webSources: WebSource[] = [];
+
+    // ================================================
+    // PATH A: Answer using relevant study material.
+    // ================================================
 
     if (useStudyMaterial) {
-      console.log("📚 Answering from study material...");
+      console.log("📚 Generating answer from study material...");
 
       const prompt = `
 You are SmartPrep AI, a placement preparation assistant.
 
-Answer the user's question using the retrieved study material.
+Answer the user's question using the study material
+provided below.
 
 RULES:
-- Use the provided study material as your primary source.
+- Use the retrieved study material as your primary source.
 - Explain concepts clearly and simply.
-- Do not invent facts or claim unsupported information.
+- Do not invent facts or unsupported information.
 - If the material does not fully answer the question,
   clearly explain its limitations.
 - Prefer C++ examples for programming questions.
 - Do not use Python unless explicitly requested.
-- Do not claim to have searched Google.
-- Keep the answer relevant to the user's question.
+- Do not claim to have searched the web.
+- Answer the user's actual question directly.
 
 ================ STUDY MATERIAL ================
 
@@ -110,26 +127,32 @@ ${context}
 
 ================ USER QUESTION ================
 
-${message.trim()}
+${question}
 
-=================================================
+================================================
 
 Provide the final answer.
 `;
 
-      interaction = await ai.interactions.create({
+      const interaction = await ai.interactions.create({
         model: "gemini-3.6-flash",
         input: prompt,
       });
 
       reply = interaction.output_text || "";
       sourceType = "study_material";
+
+      if (!reply.trim()) {
+        throw new Error(
+          "Gemini returned an empty response for study material."
+        );
+      }
     }
 
-    // ==================================================
-    // PATH B: Relevant information is not found
-    // Search Google using Gemini's built-in tool.
-    // ==================================================
+    // ================================================
+    // PATH B: Search Google when relevant study
+    // material is unavailable.
+    // ================================================
 
     else {
       console.log(
@@ -139,46 +162,49 @@ Provide the final answer.
       const webPrompt = `
 You are SmartPrep AI, an AI-powered placement preparation assistant.
 
-The user's placement-preparation knowledge base did not
-provide sufficiently relevant information for this question.
+The placement-preparation knowledge base did not return
+sufficiently relevant material for this question.
 
-Answer the question by searching the web using the
-Google Search tool.
+Use Google Search to research and answer the question.
 
 RULES:
-- Search the web before answering.
-- Prefer reliable educational resources, official
-  documentation, university resources, and reputable sources.
-- Answer the user's actual question directly.
-- Explain technical concepts in simple language.
+- Use the Google Search tool before answering.
+- Prefer official documentation, reputable educational
+  resources, universities, and reliable technical sources.
+- Explain concepts clearly and simply.
 - For programming questions, prefer C++ examples unless
   the user requests another language.
 - Do not use Python unless explicitly requested.
-- Do not invent facts, URLs, or search results.
+- Do not invent facts or fabricate sources.
+- Answer the user's actual question directly.
 - If reliable information cannot be found, say so.
-- Cite the web sources used in the response.
-- Do not claim that the answer came from the PDFs.
-- Do not claim that a search succeeded if it did not.
+- Do not claim the answer came from the study PDFs.
+- Use the web citations supplied by the search tool.
+- Keep the answer relevant to placement preparation.
 
 USER QUESTION:
-${message.trim()}
+${question}
 
-Provide a clear, useful answer based on your web research.
+Provide a clear answer based on your web research.
 `;
 
-      interaction = await ai.interactions.create({
+      const interaction = await ai.interactions.create({
         model: "gemini-3.6-flash",
         input: webPrompt,
         tools: [{ type: "google_search" }],
       });
 
       reply = interaction.output_text || "";
-
       sourceType = "web";
 
-      // 5. Extract citations returned by the Interactions API
-      // Google Search citations are supplied in model-output
-      // annotations. The response structure can vary by SDK version.
+      if (!reply.trim()) {
+        throw new Error(
+          "Gemini returned an empty response after the web search request."
+        );
+      }
+
+      // 5. Extract URL citations from model-output annotations.
+      // The precise response structure depends on the SDK/API version.
 
       const steps: any[] = interaction.steps || [];
 
@@ -197,35 +223,49 @@ Provide a clear, useful answer based on your web research.
             : [];
 
           for (const annotation of annotations) {
-            const url = annotation.uri || annotation.url;
-            const title =
-              annotation.title ||
-              (url ? new URL(url).hostname : "Web source");
+            const url =
+              annotation.url ||
+              annotation.uri;
 
             if (
-              annotation.type === "url_citation" &&
-              url &&
-              /^https?:\/\//i.test(url)
+              !url ||
+              annotation.type !== "url_citation" ||
+              !/^https?:\/\//i.test(url)
             ) {
-              const alreadyExists = webSources.some(
-                (source) => source.url === url
-              );
+              continue;
+            }
 
-              if (!alreadyExists) {
-                webSources.push({
-                  title,
-                  url,
-                });
-              }
+            let title = annotation.title || "Web source";
+
+            try {
+              title =
+                annotation.title ||
+                new URL(url).hostname;
+            } catch {
+              // Keep the fallback title.
+            }
+
+            const alreadyExists = webSources.some(
+              (source) => source.url === url
+            );
+
+            if (!alreadyExists) {
+              webSources.push({
+                title,
+                url,
+              });
             }
           }
         }
       }
 
-      console.log("🌐 Web sources found:", webSources.length);
+      console.log(
+        "🌐 Extracted web citations:",
+        webSources.length
+      );
     }
 
-    // 6. Prepare the study-material source list
+    // 6. Prepare the PDF source information.
     const sources = retrievedChunks.map((chunk) => ({
       source: chunk.source,
       chunkIndex: chunk.chunkIndex,
@@ -234,26 +274,53 @@ Provide a clear, useful answer based on your web research.
 
     console.log("✅ Answer generated");
     console.log("📌 Source type:", sourceType);
-    console.log("=================================");
+    console.log("====================================");
 
-    // 7. Return the answer and source information
+    // 7. Return the response to the frontend.
     return res.status(200).json({
       success: true,
-      rag: useStudyMaterial,
+      rag: sourceType === "study_material",
       sourceType,
       retrievedChunks: retrievedChunks.length,
       reply,
-      sources: useStudyMaterial ? sources : [],
+      sources:
+        sourceType === "study_material"
+          ? sources
+          : [],
       webSources,
     });
   } catch (error: any) {
-    console.error("❌ SMARTPREP CHAT ERROR:", error);
+    // 8. Log useful error details without exposing secrets.
+    const status =
+      error?.status ??
+      error?.statusCode ??
+      error?.response?.status;
+
+    console.error("❌ SMARTPREP CHAT ERROR:", {
+      message: error?.message,
+      status,
+      code: error?.code,
+      details: error?.errorDetails,
+    });
+
+    // Handle quota and rate-limit errors separately.
+    if (status === 429) {
+      return res.status(429).json({
+        success: false,
+        error: "QUOTA_EXCEEDED",
+        message:
+          "The AI service quota or rate limit has been reached. Please try again later.",
+      });
+    }
 
     return res.status(500).json({
       success: false,
-      message: error?.message || "Chat request failed",
+      error: "CHAT_ERROR",
+      message:
+        "SmartPrep AI could not process your request. Please try again.",
     });
   }
 });
 
 export default router;
+
