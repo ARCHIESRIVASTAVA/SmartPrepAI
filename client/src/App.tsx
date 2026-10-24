@@ -8,15 +8,15 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { API_URL } from "./api";
+import type { Screen, ServerState, Tab } from "./types";
+import { StageSelect } from "./views/StageSelect";
+import { TitleScreen } from "./views/TitleScreen";
 import { AskView } from "./views/AskView";
 import { InterviewView } from "./views/InterviewView";
 import { MockInterviewView } from "./views/MockInterviewView";
 import { ResumeView } from "./views/ResumeView";
 import "./App.css";
-
-type Tab = "ask" | "resume" | "interview" | "mock";
-
-type ServerState = "checking" | "waking" | "ready" | "offline";
+import "./stages.css";
 
 const NAV_ITEMS: { id: Tab; label: string; Icon: LucideIcon }[] = [
   { id: "ask", label: "Ask", Icon: MessageSquare },
@@ -34,6 +34,7 @@ const SERVER_LABELS: Record<ServerState, string> = {
 
 function App() {
   const [tab, setTab] = useState<Tab>("ask");
+  const [screen, setScreen] = useState<Screen>("title");
 
   // ---------------- SERVER WARM-UP ----------------
   // The Render free tier sleeps after ~15 minutes idle.
@@ -74,15 +75,39 @@ function App() {
   }, []);
 
   return (
-    <div className="shell">
+    <>
+      {screen === "title" && (
+        <TitleScreen
+          serverState={serverState}
+          onStart={() => setScreen("map")}
+        />
+      )}
+
+      {screen === "map" && (
+        <StageSelect
+          serverState={serverState}
+          onBack={() => setScreen("title")}
+          onLaunch={(id) => {
+            setTab(id);
+            setScreen("app");
+          }}
+        />
+      )}
+
+    <div className="shell" hidden={screen !== "app"}>
       <aside className="rail">
-        <div className="brand">
+        <button
+          type="button"
+          className="brand"
+          title="Back to stage select"
+          onClick={() => setScreen("map")}
+        >
           <span className="brand-mark" aria-hidden="true">
             <Highlighter size={16} />
           </span>
 
           <span className="brand-name">SmartPrep AI</span>
-        </div>
+        </button>
 
         <nav className="nav" aria-label="Tools">
           {NAV_ITEMS.map(({ id, label, Icon }) => (
@@ -144,6 +169,7 @@ function App() {
         </div>
       </main>
     </div>
+    </>
   );
 }
 

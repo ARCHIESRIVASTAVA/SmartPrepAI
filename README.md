@@ -14,6 +14,10 @@ GitHub: https://github.com/ARCHIESRIVASTAVA/SmartPrepAI
 
 ✨ Features
 
+🎮 Game-style interface
+
+Cinematic title screen that wakes the server while it loads, then a stage-select map for the four tools. Arrow keys, 1-4, Enter and Esc all work, as do mouse and touch.
+
 🤖 AI Placement Assistant
 
 Ask questions about DSA, OOP, DBMS, Operating Systems, Computer Networks, SQL and interviews.
@@ -233,13 +237,17 @@ SmartPrepAI/
 │
 ├── client/
 │   └── src/
-│       ├── App.tsx            (layout, navigation, server status)
+│       ├── App.tsx            (screens, navigation, server status)
+│       ├── types.ts
+│       ├── stages.css         (title and stage select)
 │       ├── api.ts             (API URL, streaming chat client)
 │       ├── constants.ts
 │       ├── main.tsx
 │       ├── App.css
 │       ├── index.css          (design tokens)
 │       ├── views/
+│       │   ├── TitleScreen.tsx
+│       │   ├── StageSelect.tsx
 │       │   ├── AskView.tsx
 │       │   ├── ResumeView.tsx
 │       │   ├── InterviewView.tsx
