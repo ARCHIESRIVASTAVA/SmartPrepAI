@@ -1,4 +1,21 @@
-import { useEffect, useState, type ReactElement } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactElement,
+} from "react";
+import {
+  Check,
+  CircleAlert,
+  Copy,
+  FileSearch,
+  FileUp,
+  Highlighter,
+  ListChecks,
+  LoaderCircle,
+  MessageSquare,
+  type LucideIcon,
+} from "lucide-react";
 import "./App.css";
 
 const API_URL = "https://smartprepai-5ujb.onrender.com";
@@ -8,6 +25,130 @@ type Source = {
   chunkIndex: number;
   score: number;
 };
+
+type SourceType = "study_material" | "web";
+
+type WebSource = {
+  title: string;
+  url: string;
+};
+
+type Tab = "ask" | "resume" | "interview";
+
+type ServerState = "checking" | "waking" | "ready" | "offline";
+
+const NAV_ITEMS: { id: Tab; label: string; Icon: LucideIcon }[] = [
+  { id: "ask", label: "Ask", Icon: MessageSquare },
+  { id: "resume", label: "Resume", Icon: FileSearch },
+  { id: "interview", label: "Interview", Icon: ListChecks },
+];
+
+const SERVER_LABELS: Record<ServerState, string> = {
+  checking: "Checking server",
+  waking: "Server starting up",
+  ready: "Server online",
+  offline: "Server unreachable",
+};
+
+const EXAMPLE_QUESTIONS = [
+  "Explain how paging works in an operating system",
+  "What are the ACID properties? Give an example for each",
+  "What is the difference between a process and a thread?",
+  "Write binary search in C++ and explain its time complexity",
+];
+
+const TOPICS = [
+  "DSA",
+  "DBMS",
+  "Operating Systems",
+  "OOP",
+  "Computer Networks",
+];
+
+const DIFFICULTIES = ["Easy", "Medium", "Hard"];
+
+const QUESTION_COUNTS = [3, 5, 10];
+
+/** "OS_Full_Notes.pdf" -> "OS Full Notes" */
+function prettySource(name: string) {
+  return name
+    .replace(/\.pdf$/i, "")
+    .replace(/_+/g, " ")
+    .trim();
+}
+
+function hostOf(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
+function ErrorNote({ message }: { message: string }) {
+  return (
+    <p className="error-note" role="alert">
+      <CircleAlert size={16} aria-hidden="true" />
+      <span>{message}</span>
+    </p>
+  );
+}
+
+function CopyButton({
+  text,
+  label,
+}: {
+  text: string;
+  label: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard can be blocked; nothing useful to show.
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      className="ghost-button"
+      onClick={copy}
+    >
+      {copied ? (
+        <Check size={14} aria-hidden="true" />
+      ) : (
+        <Copy size={14} aria-hidden="true" />
+      )}
+      <span>{copied ? "Copied" : label}</span>
+    </button>
+  );
+}
+
+function CodeBlock({
+  language,
+  code,
+}: {
+  language: string;
+  code: string;
+}) {
+  return (
+    <div className="code-block">
+      <div className="code-header">
+        <span>{language}</span>
+        <CopyButton text={code} label="Copy" />
+      </div>
+
+      <pre>
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+}
 
 function formatAIResponse(text: string) {
   const lines = text.split("\n");
@@ -20,16 +161,11 @@ function formatAIResponse(text: string) {
   const flushCode = () => {
     if (codeBuffer.length > 0) {
       elements.push(
-        <pre
-          className="code-block"
+        <CodeBlock
           key={`code-${elements.length}`}
-        >
-          <div className="code-header">
-            <span>{codeLanguage || "code"}</span>
-          </div>
-
-          <code>{codeBuffer.join("\n")}</code>
-        </pre>
+          language={codeLanguage || "code"}
+          code={codeBuffer.join("\n")}
+        />
       );
 
       codeBuffer = [];
@@ -166,7 +302,7 @@ function formatAIResponse(text: string) {
 
 function formatInline(text: string) {
   const parts = text.split(
-    /(\*\*.*?\*\*|`.*?`)/g
+    /(\*\*.*?\*\*|`.*?`|\*[^*\s][^*]*\*)/g
   );
 
   return parts.map((part, index) => {
@@ -195,6 +331,14 @@ function formatInline(text: string) {
       );
     }
 
+    if (
+      part.length > 2 &&
+      part.startsWith("*") &&
+      part.endsWith("*")
+    ) {
+      return <em key={index}>{part.slice(1, -1)}</em>;
+    }
+
     return part;
   });
 }
@@ -204,8 +348,12 @@ function formatInline(text: string) {
 // each piece to the caller as it arrives.
 
 type StreamHandlers = {
-  onMeta: (meta: { sources: Source[] }) => void;
+  onMeta: (meta: {
+    sources: Source[];
+    sourceType: SourceType;
+  }) => void;
   onToken: (text: string) => void;
+  onDone: (info: { webSources: WebSource[] }) => void;
   onError: (message: string) => void;
 };
 
@@ -250,12 +398,18 @@ async function streamChat(
     const payload = JSON.parse(data);
 
     if (event === "meta") {
-      handlers.onMeta({ sources: payload.sources || [] });
+      handlers.onMeta({
+        sources: payload.sources || [],
+        sourceType: payload.sourceType,
+      });
     } else if (event === "token") {
       receivedText = true;
       handlers.onToken(payload.text || "");
     } else if (event === "done") {
       finished = true;
+      handlers.onDone({
+        webSources: payload.webSources || [],
+      });
     } else if (event === "error") {
       finished = true;
       handlers.onError(
@@ -289,6 +443,58 @@ async function streamChat(
   }
 }
 
+function ResultPanel({
+  title,
+  text,
+}: {
+  title: string;
+  text: string;
+}) {
+  return (
+    <article className="result">
+      <header className="result-head">
+        <span className="result-title">{title}</span>
+        <CopyButton text={text} label="Copy" />
+      </header>
+
+      <div className="answer-content">
+        {formatAIResponse(text)}
+      </div>
+    </article>
+  );
+}
+
+function Segmented<T extends string | number>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: T[];
+  onChange: (value: T) => void;
+}) {
+  return (
+    <fieldset className="field">
+      <legend>{label}</legend>
+
+      <div className="segmented">
+        {options.map((option) => (
+          <button
+            key={option}
+            type="button"
+            aria-pressed={value === option}
+            onClick={() => onChange(option)}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
 function App() {
   // ---------------- CHAT ----------------
 
@@ -317,32 +523,50 @@ function App() {
   const [interviewLoading, setInterviewLoading] =
     useState(false);
 
+  // ---------------- NAVIGATION + CHAT EXTRAS ----------------
+
+  const [tab, setTab] = useState<Tab>("ask");
+  const [sourceType, setSourceType] =
+    useState<SourceType | null>(null);
+  const [webSources, setWebSources] =
+    useState<WebSource[]>([]);
+  const [chatError, setChatError] = useState("");
+  const [resumeError, setResumeError] = useState("");
+  const [interviewError, setInterviewError] = useState("");
+  const questionInput =
+    useRef<HTMLTextAreaElement>(null);
+
   // ---------------- SERVER WARM-UP ----------------
   // The Render free tier sleeps after ~15 minutes idle.
   // Ping it as soon as the page opens so it wakes up while the
   // user is reading, and tell them if it's taking a while.
 
-  const [serverWaking, setServerWaking] =
-    useState(false);
+  const [serverState, setServerState] =
+    useState<ServerState>("checking");
 
   useEffect(() => {
     let cancelled = false;
 
-    // Only show the message if the ping is actually slow,
-    // so a warm server never flashes a banner.
+    // Only say "starting up" if the ping is actually slow,
+    // so a warm server never flashes a notice.
     const slowTimer = setTimeout(() => {
-      if (!cancelled) setServerWaking(true);
+      if (!cancelled) {
+        setServerState((current) =>
+          current === "checking" ? "waking" : current
+        );
+      }
     }, 2000);
 
     fetch(`${API_URL}/`)
-      .catch(() => {
-        // If the ping fails, the real requests will
-        // show their own error messages.
+      .then((response) => {
+        if (!cancelled) {
+          setServerState(response.ok ? "ready" : "offline");
+        }
       })
-      .finally(() => {
-        clearTimeout(slowTimer);
-        if (!cancelled) setServerWaking(false);
-      });
+      .catch(() => {
+        if (!cancelled) setServerState("offline");
+      })
+      .finally(() => clearTimeout(slowTimer));
 
     return () => {
       cancelled = true;
@@ -358,22 +582,23 @@ function App() {
     setChatLoading(true);
     setReply("");
     setSources([]);
+    setSourceType(null);
+    setWebSources([]);
+    setChatError("");
 
     try {
       // Preferred path: stream the answer as it is generated.
       await streamChat(message.trim(), {
-        onMeta: (meta) => setSources(meta.sources),
+        onMeta: (meta) => {
+          setSources(meta.sources);
+          setSourceType(meta.sourceType);
+        },
         onToken: (text) =>
           setReply((previous) => previous + text),
-        onError: (errorMessage) => {
-          // If part of an answer already arrived, keep it and
-          // add the error underneath instead of hiding it.
-          setReply((previous) =>
-            previous
-              ? `${previous}\n\n${errorMessage}`
-              : errorMessage
-          );
-        },
+        onDone: (info) => setWebSources(info.webSources),
+        // Any text that already arrived stays on screen;
+        // the error is shown separately underneath it.
+        onError: (errorMessage) => setChatError(errorMessage),
       });
     } catch (streamError) {
       console.error(
@@ -401,8 +626,10 @@ function App() {
         if (data.success) {
           setReply(data.reply || "");
           setSources(data.sources || []);
+          setSourceType(data.sourceType ?? null);
+          setWebSources(data.webSources || []);
         } else {
-          setReply(
+          setChatError(
             data.message ||
               "Something went wrong."
           );
@@ -410,7 +637,7 @@ function App() {
       } catch (error) {
         console.error(error);
 
-        setReply(
+        setChatError(
           "Unable to connect to SmartPrep AI. Please try again."
         );
       }
@@ -426,6 +653,7 @@ function App() {
 
     setResumeLoading(true);
     setAnalysis("");
+    setResumeError("");
 
     try {
       const formData = new FormData();
@@ -445,7 +673,7 @@ function App() {
       if (data.success) {
         setAnalysis(data.analysis);
       } else {
-        setAnalysis(
+        setResumeError(
           data.message ||
             "Resume analysis failed."
         );
@@ -453,7 +681,7 @@ function App() {
     } catch (error) {
       console.error(error);
 
-      setAnalysis(
+      setResumeError(
         "Unable to connect to the resume analyzer."
       );
     } finally {
@@ -466,6 +694,7 @@ function App() {
   const generateInterview = async () => {
     setInterviewLoading(true);
     setQuestions("");
+    setInterviewError("");
 
     try {
       const response = await fetch(
@@ -488,7 +717,7 @@ function App() {
       if (data.success) {
         setQuestions(data.questions);
       } else {
-        setQuestions(
+        setInterviewError(
           data.message ||
             "Failed to generate questions."
         );
@@ -496,7 +725,7 @@ function App() {
     } catch (error) {
       console.error(error);
 
-      setQuestions(
+      setInterviewError(
         "Unable to connect to the interview generator."
       );
     } finally {
@@ -504,524 +733,483 @@ function App() {
     }
   };
 
-  return (
-    <div className="app">
+  const progressText =
+    sourceType === "study_material"
+      ? `Found ${sources.length} ${
+          sources.length === 1 ? "passage" : "passages"
+        } in your notes. Writing the answer…`
+      : sourceType === "web"
+        ? "Nothing in your notes matched closely. Searching the web…"
+        : "Searching your notes…";
 
-      {/* HEADER */}
+  const sourcesPanel = (
+    <aside
+      className="margin"
+      aria-label="Sources for this answer"
+    >
+      {sourceType === "study_material" && (
+        <>
+          <h2>From your notes</h2>
 
-      <header className="header">
-        <div className="logo">
-          🚀 SmartPrep AI
-        </div>
-
-        <p>
-          Your AI-powered placement preparation
-          assistant
-        </p>
-      </header>
-
-      {serverWaking && (
-        <div className="server-status" role="status">
-          <div className="loading-dots">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-
-          <span>
-            Waking up the server... this can take up
-            to a minute after a period of inactivity.
-          </span>
-        </div>
-      )}
-
-      <main className="main">
-
-        {/* HERO */}
-
-        <section className="hero">
-          <span className="badge">
-            AI • PLACEMENT • PREPARATION
-          </span>
-
-          <h1>
-            Prepare smarter.
-            <br />
-            <span>Get placed faster.</span>
-          </h1>
-
-          <p>
-            Practice interviews, analyze your resume,
-            and prepare for software engineering
-            placements with AI.
+          <p className="margin-note">
+            Ranked by how closely each passage matches
+            your question.
           </p>
-        </section>
 
-        {/* CHAT */}
+          <ul className="source-list">
+            {sources.map((item, index) => {
+              const percent = Math.round(item.score * 100);
 
-        <section className="card chat-card">
-
-          <div className="card-header">
-            <div className="icon">
-              🤖
-            </div>
-
-            <div>
-              <h2>
-                AI Placement Assistant
-              </h2>
-
-              <p>
-                Ask anything about DSA, DBMS, OS,
-                OOP or interviews.
-              </p>
-            </div>
-          </div>
-
-          <textarea
-            value={message}
-            onChange={(e) =>
-              setMessage(e.target.value)
-            }
-            placeholder="Example: Explain binary search in simple terms..."
-          />
-
-          <button
-            className="primary-button"
-            onClick={sendMessage}
-            disabled={chatLoading}
-          >
-            {chatLoading
-              ? "🤔 Thinking..."
-              : "Ask SmartPrep AI →"}
-          </button>
-
-          {chatLoading && !reply && (
-            <div className="loading-box">
-
-              <div className="loading-dots">
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-
-              <span>
-                Searching your study material and
-                generating an answer...
-              </span>
-
-            </div>
-          )}
-
-          {reply && (
-            <div className="ai-response">
-
-              <div className="response-top">
-
-                <div className="ai-avatar">
-                  🤖
-                </div>
-
-                <div>
-                  <strong>
-                    SmartPrep AI
-                  </strong>
-
-                  <span>
-                    AI-powered answer
-                  </span>
-                </div>
-
-                {sources.length > 0 && (
-                  <div className="rag-badge">
-                    ✦ RAG
+              return (
+                <li
+                  className="source"
+                  key={`${item.source}-${item.chunkIndex}-${index}`}
+                >
+                  <div className="source-name">
+                    {prettySource(item.source)}
                   </div>
-                )}
 
-              </div>
-
-              <div className="answer-content">
-                {formatAIResponse(reply)}
-              </div>
-
-              {sources.length > 0 && !chatLoading && (
-                <div className="sources-section">
-
-                  <div className="sources-title">
-
-                    📚 Based on your study material
-
-                    <span>
-                      {sources.length} sources
+                  <div className="match">
+                    <span
+                      className="match-bar"
+                      aria-hidden="true"
+                    >
+                      <span style={{ width: `${percent}%` }} />
                     </span>
 
+                    <span className="match-pct">
+                      {percent}% match
+                    </span>
                   </div>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
 
-                  <div className="sources-list">
+      {sourceType === "web" && (
+        <>
+          <h2>From the web</h2>
 
-                    {sources.map(
-                      (source, index) => (
-                        <div
-                          className="source-card"
-                          key={`${source.source}-${source.chunkIndex}-${index}`}
-                        >
+          <p className="margin-note">
+            Nothing in your notes matched closely, so
+            this answer used web search.
+          </p>
 
-                          <div className="source-icon">
-                            📄
-                          </div>
+          {webSources.length > 0 ? (
+            <ul className="source-list">
+              {webSources.map((item) => (
+                <li className="source" key={item.url}>
+                  <a
+                    className="web-link"
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {item.title}
+                  </a>
 
-                          <div className="source-info">
+                  <span className="web-host">
+                    {hostOf(item.url)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="margin-note">
+              {chatLoading
+                ? "Links appear when the answer finishes."
+                : "No links were returned."}
+            </p>
+          )}
+        </>
+      )}
 
-                            <strong>
-                              {source.source}
-                            </strong>
+      {sourceType === null && (
+        <>
+          <h2>Sources</h2>
 
-                            <small>
-                              Study material •
-                              Relevant section
-                            </small>
+          <p className="margin-note">
+            Passages from your notes show up here as soon as
+            they are found, with how closely each one
+            matches.
+          </p>
+        </>
+      )}
+    </aside>
+  );
 
-                          </div>
+  return (
+    <div className="shell">
+      <aside className="rail">
+        <div className="brand">
+          <span className="brand-mark" aria-hidden="true">
+            <Highlighter size={16} />
+          </span>
 
-                          <div className="score">
-                            {Math.round(
-                              source.score * 100
-                            )}
-                            %
-                          </div>
+          <span className="brand-name">SmartPrep AI</span>
+        </div>
 
-                        </div>
-                      )
+        <nav className="nav" aria-label="Tools">
+          {NAV_ITEMS.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              type="button"
+              className="nav-item"
+              aria-current={tab === id ? "page" : undefined}
+              onClick={() => setTab(id)}
+            >
+              <Icon size={17} aria-hidden="true" />
+              <span>{label}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="rail-footer" role="status">
+          <span
+            className={`status-dot status-${serverState}`}
+            aria-hidden="true"
+          />
+
+          <span>{SERVER_LABELS[serverState]}</span>
+        </div>
+      </aside>
+
+      <main className="workspace">
+        {serverState === "waking" && (
+          <p className="notice" role="status">
+            The server was idle and is starting up. The
+            first answer can take up to a minute.
+          </p>
+        )}
+
+        {serverState === "offline" && (
+          <p className="notice" role="status">
+            Can't reach the server. Check your connection and
+            refresh the page.
+          </p>
+        )}
+
+        {/* ---------------- ASK ---------------- */}
+
+        {tab === "ask" && (
+          <div className="ask-layout">
+            <section
+              className="column"
+              aria-labelledby="ask-title"
+            >
+              <header className="page-head">
+                <h1 id="ask-title">
+                  Ask about any placement topic
+                </h1>
+
+                <p>
+                  Answers come from your study notes first.
+                  When the notes don't cover a question,
+                  SmartPrep searches the web instead.
+                </p>
+              </header>
+
+              <div className="composer">
+                <textarea
+                  ref={questionInput}
+                  aria-label="Your question"
+                  value={message}
+                  onChange={(e) =>
+                    setMessage(e.target.value)
+                  }
+                  onKeyDown={(e) => {
+                    if (
+                      (e.metaKey || e.ctrlKey) &&
+                      e.key === "Enter"
+                    ) {
+                      e.preventDefault();
+
+                      if (!chatLoading) sendMessage();
+                    }
+                  }}
+                  placeholder="Explain binary search in simple terms"
+                />
+
+                <div className="composer-bar">
+                  <span className="hint">
+                    Ctrl or ⌘ + Enter to send
+                  </span>
+
+                  <button
+                    className="primary-button"
+                    onClick={sendMessage}
+                    disabled={
+                      chatLoading || !message.trim()
+                    }
+                  >
+                    {chatLoading ? (
+                      <>
+                        <LoaderCircle
+                          className="spin"
+                          size={16}
+                          aria-hidden="true"
+                        />
+                        Working
+                      </>
+                    ) : (
+                      "Ask"
                     )}
+                  </button>
+                </div>
+              </div>
 
-                  </div>
+              {chatLoading && !reply && (
+                <p className="progress" role="status">
+                  <LoaderCircle
+                    className="spin"
+                    size={16}
+                    aria-hidden="true"
+                  />
+                  {progressText}
+                </p>
+              )}
 
+              {chatError && !reply && (
+                <ErrorNote message={chatError} />
+              )}
+
+              {!chatLoading && !reply && (
+                <div className="examples">
+                  <p>Not sure where to start? Try one of these.</p>
+
+                  {EXAMPLE_QUESTIONS.map((example) => (
+                    <button
+                      key={example}
+                      type="button"
+                      className="example"
+                      onClick={() => {
+                        setMessage(example);
+                        questionInput.current?.focus();
+                      }}
+                    >
+                      {example}
+                    </button>
+                  ))}
                 </div>
               )}
 
-            </div>
-          )}
+              {reply && (
+                <article
+                  className="answer"
+                  aria-busy={chatLoading}
+                >
+                  <header className="result-head">
+                    <span className="result-title">
+                      SmartPrep AI
+                    </span>
 
-        </section>
+                    {!chatLoading && (
+                      <CopyButton
+                        text={reply}
+                        label="Copy answer"
+                      />
+                    )}
+                  </header>
 
-        {/* RESUME */}
+                  <div className="answer-content">
+                    {formatAIResponse(reply)}
+                  </div>
 
-        <section className="card">
+                  {chatLoading && (
+                    <span
+                      className="caret"
+                      aria-hidden="true"
+                    />
+                  )}
+                </article>
+              )}
 
-          <div className="card-header">
+              {chatError && reply && (
+                <ErrorNote message={chatError} />
+              )}
+            </section>
 
-            <div className="icon">
-              📄
-            </div>
+            {sourcesPanel}
+          </div>
+        )}
 
-            <div>
+        {/* ---------------- RESUME ---------------- */}
 
-              <h2>
-                AI Resume Analyzer
-              </h2>
+        {tab === "resume" && (
+          <section
+            className="column"
+            aria-labelledby="resume-title"
+          >
+            <header className="page-head">
+              <h1 id="resume-title">Check your resume</h1>
 
               <p>
-                Upload your resume and get an
-                AI-powered ATS analysis.
+                Upload a PDF under 5 MB to get an ATS score,
+                skill gaps, and the fixes to make first.
               </p>
+            </header>
 
+            <label className="dropzone">
+              <input
+                type="file"
+                accept=".pdf"
+                onChange={(e) => {
+                  const file =
+                    e.target.files?.[0] || null;
+
+                  setResume(file);
+                  setAnalysis("");
+                  setResumeError("");
+                }}
+              />
+
+              <FileUp size={22} aria-hidden="true" />
+
+              <span className="dropzone-text">
+                {resume ? (
+                  <>
+                    <strong>{resume.name}</strong>
+
+                    <span className="sub">
+                      {Math.max(
+                        1,
+                        Math.round(resume.size / 1024)
+                      )}{" "}
+                      KB. Click to choose a different file.
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <strong>Choose a PDF resume</strong>
+
+                    <span className="sub">
+                      PDF only, up to 5 MB
+                    </span>
+                  </>
+                )}
+              </span>
+            </label>
+
+            <div className="actions">
+              <button
+                className="primary-button"
+                onClick={analyzeResume}
+                disabled={!resume || resumeLoading}
+              >
+                {resumeLoading ? (
+                  <>
+                    <LoaderCircle
+                      className="spin"
+                      size={16}
+                      aria-hidden="true"
+                    />
+                    Analyzing
+                  </>
+                ) : (
+                  "Analyze resume"
+                )}
+              </button>
             </div>
 
-          </div>
-
-          <label className="upload-box">
-
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={(e) => {
-
-                const file =
-                  e.target.files?.[0] ||
-                  null;
-
-                setResume(file);
-                setAnalysis("");
-
-              }}
-            />
-
-            <div className="upload-icon">
-              📁
-            </div>
-
-            {resume ? (
-              <>
-                <strong>
-                  {resume.name}
-                </strong>
-
-                <span>
-                  PDF selected successfully
-                </span>
-              </>
-            ) : (
-              <>
-                <strong>
-                  Choose your resume
-                </strong>
-
-                <span>
-                  PDF files only • Maximum 5 MB
-                </span>
-              </>
+            {resumeError && (
+              <ErrorNote message={resumeError} />
             )}
 
-          </label>
+            {analysis && (
+              <ResultPanel
+                title="Resume analysis"
+                text={analysis}
+              />
+            )}
+          </section>
+        )}
 
-          <button
-            className="primary-button"
-            onClick={analyzeResume}
-            disabled={
-              !resume || resumeLoading
-            }
+        {/* ---------------- INTERVIEW ---------------- */}
+
+        {tab === "interview" && (
+          <section
+            className="column"
+            aria-labelledby="interview-title"
           >
-            {resumeLoading
-              ? "Analyzing Resume..."
-              : "Analyze My Resume →"}
-          </button>
-
-          {analysis && (
-            <div className="response-box">
-
-              <div className="response-title">
-                📊 Resume Analysis
-              </div>
-
-              <div className="analysis-text">
-                {analysis}
-              </div>
-
-            </div>
-          )}
-
-        </section>
-
-        {/* INTERVIEW */}
-
-        <section className="card">
-
-          <div className="card-header">
-
-            <div className="icon">
-              🎯
-            </div>
-
-            <div>
-
-              <h2>
-                AI Interview Generator
-              </h2>
+            <header className="page-head">
+              <h1 id="interview-title">
+                Practice interview questions
+              </h1>
 
               <p>
-                Generate placement interview
-                questions using AI.
+                Pick a topic and a difficulty. You get
+                questions only, so you can try to answer
+                before you look anything up.
               </p>
+            </header>
 
-            </div>
+            <div className="controls">
+              <label className="field">
+                <span className="field-label">Topic</span>
 
-          </div>
-
-          <div className="interview-controls">
-
-            <div>
-
-              <label>
-                Topic
+                <select
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                >
+                  {TOPICS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
               </label>
 
-              <select
-                value={topic}
-                onChange={(e) =>
-                  setTopic(e.target.value)
-                }
-              >
-
-                <option value="DSA">
-                  DSA
-                </option>
-
-                <option value="DBMS">
-                  DBMS
-                </option>
-
-                <option value="Operating Systems">
-                  Operating Systems
-                </option>
-
-                <option value="OOP">
-                  OOP
-                </option>
-
-                <option value="Computer Networks">
-                  Computer Networks
-                </option>
-
-              </select>
-
-            </div>
-
-            <div>
-
-              <label>
-                Difficulty
-              </label>
-
-              <select
+              <Segmented
+                label="Difficulty"
                 value={difficulty}
-                onChange={(e) =>
-                  setDifficulty(e.target.value)
-                }
-              >
+                options={DIFFICULTIES}
+                onChange={setDifficulty}
+              />
 
-                <option value="Easy">
-                  Easy
-                </option>
-
-                <option value="Medium">
-                  Medium
-                </option>
-
-                <option value="Hard">
-                  Hard
-                </option>
-
-              </select>
-
-            </div>
-
-            <div>
-
-              <label>
-                Questions
-              </label>
-
-              <select
+              <Segmented
+                label="Questions"
                 value={count}
-                onChange={(e) =>
-                  setCount(
-                    Number(e.target.value)
-                  )
-                }
+                options={QUESTION_COUNTS}
+                onChange={setCount}
+              />
+            </div>
+
+            <div className="actions">
+              <button
+                className="primary-button"
+                onClick={generateInterview}
+                disabled={interviewLoading}
               >
-
-                <option value={3}>
-                  3
-                </option>
-
-                <option value={5}>
-                  5
-                </option>
-
-                <option value={10}>
-                  10
-                </option>
-
-              </select>
-
+                {interviewLoading ? (
+                  <>
+                    <LoaderCircle
+                      className="spin"
+                      size={16}
+                      aria-hidden="true"
+                    />
+                    Generating
+                  </>
+                ) : (
+                  "Generate questions"
+                )}
+              </button>
             </div>
 
-          </div>
+            {interviewError && (
+              <ErrorNote message={interviewError} />
+            )}
 
-          <button
-            className="primary-button"
-            onClick={generateInterview}
-            disabled={interviewLoading}
-          >
-            {interviewLoading
-              ? "Generating Questions..."
-              : "Generate Interview Questions →"}
-          </button>
-
-          {questions && (
-            <div className="response-box">
-
-              <div className="response-title">
-                🎯 Interview Questions
-              </div>
-
-              <div className="analysis-text">
-                {questions}
-              </div>
-
-            </div>
-          )}
-
-        </section>
-
-        {/* FEATURES */}
-
-        <section className="features">
-
-          <div className="feature">
-
-            <div>
-              💬
-            </div>
-
-            <h3>
-              AI Chat
-            </h3>
-
-            <p>
-              Get instant explanations for
-              placement preparation.
-            </p>
-
-          </div>
-
-          <div className="feature">
-
-            <div>
-              📄
-            </div>
-
-            <h3>
-              Resume Analysis
-            </h3>
-
-            <p>
-              Identify resume strengths, gaps
-              and ATS improvements.
-            </p>
-
-          </div>
-
-          <div className="feature">
-
-            <div>
-              🎯
-            </div>
-
-            <h3>
-              Interview Prep
-            </h3>
-
-            <p>
-              Generate technical software
-              engineering interview questions.
-            </p>
-
-          </div>
-
-        </section>
-
+            {questions && (
+              <ResultPanel
+                title="Interview questions"
+                text={questions}
+              />
+            )}
+          </section>
+        )}
       </main>
-
-      <footer>
-
-        <p>
-          SmartPrep AI • Built for smarter
-          placement preparation
-        </p>
-
-      </footer>
-
     </div>
   );
 }
