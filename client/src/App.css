@@ -681,6 +681,99 @@
 }
 
 /* ================================================
+   MOCK INTERVIEW
+   ================================================ */
+
+.question {
+  margin-bottom: 20px;
+}
+
+.question p {
+  margin: 6px 0 0;
+  font-size: 19px;
+  font-weight: 560;
+  line-height: 1.4;
+  letter-spacing: -0.005em;
+}
+
+.bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.actions-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.yours-label {
+  margin: 0 0 6px;
+  color: var(--text-3);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.yours {
+  margin: 0 0 4px;
+  padding-left: 14px;
+  border-left: 2px solid var(--line-strong);
+  color: var(--text-2);
+  font-size: 14.5px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.result-head-main {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+
+.score {
+  color: var(--text);
+  font-size: 26px;
+  font-weight: 640;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.score small {
+  margin-left: 2px;
+  color: var(--text-3);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.score-good {
+  color: var(--ok);
+}
+
+.score-low {
+  color: var(--bad);
+}
+
+.clamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.history-score {
+  margin-top: 4px;
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.composer textarea:disabled {
+  opacity: 0.6;
+}
+
+/* ================================================
    RESPONSIVE
    ================================================ */
 

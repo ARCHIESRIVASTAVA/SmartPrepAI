@@ -28,7 +28,28 @@ router.post("/start", async (req, res) => {
     const {
       topic = "DSA",
       difficulty = "Medium",
+      previousQuestions = [],
     } = req.body;
+
+    // Optional: questions already asked in this session, so a
+    // multi-round interview does not repeat itself. Capped so a
+    // long session cannot make the prompt grow without limit.
+    const asked: string[] = Array.isArray(previousQuestions)
+      ? previousQuestions
+          .filter(
+            (item: unknown): item is string =>
+              typeof item === "string" && item.trim() !== ""
+          )
+          .slice(-10)
+          .map((item) => item.trim().slice(0, 300))
+      : [];
+
+    const avoidRepeats = asked.length
+      ? `
+Do not repeat or closely rephrase these questions that were already asked:
+${asked.map((item) => `- ${item}`).join("\n")}
+`
+      : "";
 
     const prompt = `
 You are conducting a technical software engineering mock interview.
@@ -37,7 +58,7 @@ Topic: ${topic}
 Difficulty: ${difficulty}
 
 Ask ONE technical interview question.
-
+${avoidRepeats}
 Rules:
 - The question should be suitable for a software engineering placement.
 - Do not give the answer.

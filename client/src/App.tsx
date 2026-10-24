@@ -14,6 +14,7 @@ import {
   ListChecks,
   LoaderCircle,
   MessageSquare,
+  Mic,
   type LucideIcon,
 } from "lucide-react";
 import "./App.css";
@@ -33,14 +34,22 @@ type WebSource = {
   url: string;
 };
 
-type Tab = "ask" | "resume" | "interview";
+type Tab = "ask" | "resume" | "interview" | "mock";
+
+type MockRound = {
+  question: string;
+  /** null when the question was skipped or no score could be read */
+  score: number | null;
+  skipped?: boolean;
+};
 
 type ServerState = "checking" | "waking" | "ready" | "offline";
 
 const NAV_ITEMS: { id: Tab; label: string; Icon: LucideIcon }[] = [
   { id: "ask", label: "Ask", Icon: MessageSquare },
   { id: "resume", label: "Resume", Icon: FileSearch },
-  { id: "interview", label: "Interview", Icon: ListChecks },
+  { id: "interview", label: "Questions", Icon: ListChecks },
+  { id: "mock", label: "Mock interview", Icon: Mic },
 ];
 
 const SERVER_LABELS: Record<ServerState, string> = {
@@ -84,6 +93,65 @@ function hostOf(url: string) {
     return url;
   }
 }
+
+// ---------------- MOCK INTERVIEW HELPERS ----------------
+
+/** Reads "Score: 7/10" (also "**Score: 7/10**", "Score: 7.5/10"). */
+function parseScore(evaluation: string): number | null {
+  const match = evaluation.match(
+    /score\s*:?\s*\**\s*(\d+(?:\.\d+)?)\s*\/\s*10/i
+  );
+
+  if (!match) return null;
+
+  const value = Number(match[1]);
+
+  return value >= 0 && value <= 10 ? value : null;
+}
+
+/**
+ * Prepares the evaluation text for display: drops the score line
+ * (it is shown as a badge instead) and turns the section labels
+ * into headings so they read as sections.
+ */
+function prepareEvaluation(evaluation: string): string {
+  return evaluation
+    .replace(
+      /^[ \t]*\**[ \t]*score[ \t]*:?[ \t]*\**[ \t]*\d+(?:\.\d+)?[ \t]*\/[ \t]*10[ \t]*\**[ \t]*$/im,
+      ""
+    )
+    .replace(
+      /^[ \t]*\**[ \t]*(what you did well|what you missed|how to improve|ideal approach)[ \t]*:?[ \t]*\**[ \t]*$/gim,
+      (_match, label: string) =>
+        `### ${label.charAt(0).toUpperCase()}${label
+          .slice(1)
+          .toLowerCase()}`
+    )
+    .trim();
+}
+
+function scoreClass(score: number) {
+  if (score >= 7) return "score score-good";
+  if (score < 5) return "score score-low";
+  return "score";
+}
+
+/** Turns raw API errors (quota, network) into something readable. */
+function friendlyError(
+  status: number,
+  message: unknown,
+  fallback: string
+) {
+  const text = typeof message === "string" ? message : "";
+
+  if (status === 429 || /quota|rate.?limit|429/i.test(text)) {
+    return "The AI service has hit its usage limit. Wait a minute and try again.";
+  }
+
+  return fallback;
+}
+
+// ---------------- END MOCK INTERVIEW HELPERS ----------------
 
 function ErrorNote({ message }: { message: string }) {
   return (
@@ -536,6 +604,24 @@ function App() {
   const questionInput =
     useRef<HTMLTextAreaElement>(null);
 
+  // ---------------- MOCK INTERVIEW ----------------
+
+  const [mockTopic, setMockTopic] = useState("DSA");
+  const [mockDifficulty, setMockDifficulty] =
+    useState("Medium");
+  const [mockQuestion, setMockQuestion] = useState("");
+  const [mockRound, setMockRound] = useState(0);
+  const [mockAnswer, setMockAnswer] = useState("");
+  const [mockEvaluation, setMockEvaluation] =
+    useState("");
+  const [mockHistory, setMockHistory] = useState<
+    MockRound[]
+  >([]);
+  const [mockBusy, setMockBusy] = useState<
+    "start" | "evaluate" | null
+  >(null);
+  const [mockError, setMockError] = useState("");
+
   // ---------------- SERVER WARM-UP ----------------
   // The Render free tier sleeps after ~15 minutes idle.
   // Ping it as soon as the page opens so it wakes up while the
@@ -732,6 +818,158 @@ function App() {
       setInterviewLoading(false);
     }
   };
+
+  // ---------------- MOCK INTERVIEW ----------------
+
+  // Fetches the next question. `rounds` is the session so far,
+  // sent to the server so it does not repeat a question.
+  const startMockQuestion = async (
+    rounds: MockRound[] = mockHistory
+  ) => {
+    setMockBusy("start");
+    setMockError("");
+
+    try {
+      const response = await fetch(
+        `${API_URL}/mock-interview/start`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            topic: mockTopic,
+            difficulty: mockDifficulty,
+            previousQuestions: rounds.map(
+              (round) => round.question
+            ),
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (
+        data.success &&
+        typeof data.question === "string" &&
+        data.question.trim()
+      ) {
+        setMockQuestion(data.question.trim());
+        setMockRound(rounds.length + 1);
+        setMockAnswer("");
+        setMockEvaluation("");
+      } else {
+        setMockError(
+          friendlyError(
+            response.status,
+            data.message,
+            "Couldn't get a question. Try again."
+          )
+        );
+      }
+    } catch (error) {
+      console.error(error);
+
+      setMockError(
+        "Can't reach the server. Check your connection and try again."
+      );
+    } finally {
+      setMockBusy(null);
+    }
+  };
+
+  const submitMockAnswer = async () => {
+    const answer = mockAnswer.trim();
+
+    if (!answer || !mockQuestion || mockBusy) return;
+
+    setMockBusy("evaluate");
+    setMockError("");
+
+    try {
+      const response = await fetch(
+        `${API_URL}/mock-interview/evaluate`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            topic: mockTopic,
+            question: mockQuestion,
+            answer,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (
+        data.success &&
+        typeof data.evaluation === "string" &&
+        data.evaluation.trim()
+      ) {
+        setMockEvaluation(data.evaluation);
+        setMockHistory((rounds) => [
+          ...rounds,
+          {
+            question: mockQuestion,
+            score: parseScore(data.evaluation),
+          },
+        ]);
+      } else {
+        setMockError(
+          friendlyError(
+            response.status,
+            data.message,
+            "Couldn't review your answer. Try again."
+          )
+        );
+      }
+    } catch (error) {
+      console.error(error);
+
+      setMockError(
+        "Can't reach the server. Check your connection and try again."
+      );
+    } finally {
+      setMockBusy(null);
+    }
+  };
+
+  const skipMockQuestion = () => {
+    const rounds: MockRound[] = [
+      ...mockHistory,
+      { question: mockQuestion, score: null, skipped: true },
+    ];
+
+    setMockHistory(rounds);
+    startMockQuestion(rounds);
+  };
+
+  const endMockInterview = () => {
+    setMockQuestion("");
+    setMockRound(0);
+    setMockAnswer("");
+    setMockEvaluation("");
+    setMockHistory([]);
+    setMockError("");
+  };
+
+  const scoredRounds = mockHistory.filter(
+    (round) => round.score !== null
+  );
+
+  const averageScore = scoredRounds.length
+    ? scoredRounds.reduce(
+        (total, round) => total + (round.score ?? 0),
+        0
+      ) / scoredRounds.length
+    : null;
+
+  const currentScore = mockEvaluation
+    ? parseScore(mockEvaluation)
+    : null;
 
   const progressText =
     sourceType === "study_material"
@@ -1208,6 +1446,304 @@ function App() {
               />
             )}
           </section>
+        )}
+
+        {/* ---------------- MOCK INTERVIEW ---------------- */}
+
+        {tab === "mock" && (
+          <div className="ask-layout">
+            <section
+              className="column"
+              aria-labelledby="mock-title"
+            >
+              <header className="page-head">
+                <h1 id="mock-title">Mock interview</h1>
+
+                <p>
+                  Answer one question at a time, then get a
+                  score and feedback on what you missed.
+                  Nothing is saved after you leave the page.
+                </p>
+              </header>
+
+              {!mockQuestion ? (
+                <>
+                  <div className="controls">
+                    <label className="field">
+                      <span className="field-label">
+                        Topic
+                      </span>
+
+                      <select
+                        value={mockTopic}
+                        onChange={(e) =>
+                          setMockTopic(e.target.value)
+                        }
+                      >
+                        {TOPICS.map((option) => (
+                          <option
+                            key={option}
+                            value={option}
+                          >
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <Segmented
+                      label="Difficulty"
+                      value={mockDifficulty}
+                      options={DIFFICULTIES}
+                      onChange={setMockDifficulty}
+                    />
+                  </div>
+
+                  <div className="actions">
+                    <button
+                      className="primary-button"
+                      onClick={() => startMockQuestion()}
+                      disabled={mockBusy !== null}
+                    >
+                      {mockBusy === "start" ? (
+                        <>
+                          <LoaderCircle
+                            className="spin"
+                            size={16}
+                            aria-hidden="true"
+                          />
+                          Starting
+                        </>
+                      ) : (
+                        "Start interview"
+                      )}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="question">
+                    <span className="result-title">
+                      Question {mockRound}
+                    </span>
+
+                    <p>{mockQuestion}</p>
+                  </div>
+
+                  {!mockEvaluation ? (
+                    <div className="composer">
+                      <textarea
+                        aria-label="Your answer"
+                        value={mockAnswer}
+                        onChange={(e) =>
+                          setMockAnswer(e.target.value)
+                        }
+                        onKeyDown={(e) => {
+                          if (
+                            (e.metaKey || e.ctrlKey) &&
+                            e.key === "Enter"
+                          ) {
+                            e.preventDefault();
+                            submitMockAnswer();
+                          }
+                        }}
+                        placeholder="Answer the way you would say it in the interview"
+                        disabled={mockBusy !== null}
+                      />
+
+                      <div className="composer-bar">
+                        <span className="hint">
+                          Ctrl or ⌘ + Enter to submit
+                        </span>
+
+                        <div className="bar-actions">
+                          <button
+                            type="button"
+                            className="ghost-button"
+                            onClick={skipMockQuestion}
+                            disabled={mockBusy !== null}
+                          >
+                            Skip question
+                          </button>
+
+                          <button
+                            className="primary-button"
+                            onClick={submitMockAnswer}
+                            disabled={
+                              mockBusy !== null ||
+                              !mockAnswer.trim()
+                            }
+                          >
+                            {mockBusy === "evaluate" ? (
+                              <>
+                                <LoaderCircle
+                                  className="spin"
+                                  size={16}
+                                  aria-hidden="true"
+                                />
+                                Reviewing
+                              </>
+                            ) : (
+                              "Submit answer"
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="yours-label">
+                        Your answer
+                      </p>
+
+                      <blockquote className="yours">
+                        {mockAnswer}
+                      </blockquote>
+
+                      <article className="result">
+                        <header className="result-head">
+                          <div className="result-head-main">
+                            <span className="result-title">
+                              Feedback
+                            </span>
+
+                            {currentScore !== null && (
+                              <span
+                                className={scoreClass(
+                                  currentScore
+                                )}
+                              >
+                                {currentScore}
+                                <small>/10</small>
+                              </span>
+                            )}
+                          </div>
+
+                          <CopyButton
+                            text={prepareEvaluation(
+                              mockEvaluation
+                            )}
+                            label="Copy"
+                          />
+                        </header>
+
+                        <div className="answer-content">
+                          {formatAIResponse(
+                            prepareEvaluation(mockEvaluation)
+                          )}
+                        </div>
+                      </article>
+
+                      <div className="actions actions-row">
+                        <button
+                          className="primary-button"
+                          onClick={() => startMockQuestion()}
+                          disabled={mockBusy !== null}
+                        >
+                          {mockBusy === "start" ? (
+                            <>
+                              <LoaderCircle
+                                className="spin"
+                                size={16}
+                                aria-hidden="true"
+                              />
+                              Getting question
+                            </>
+                          ) : (
+                            "Next question"
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          className="ghost-button"
+                          onClick={endMockInterview}
+                          disabled={mockBusy !== null}
+                        >
+                          End interview
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {mockBusy === "evaluate" && (
+                    <p className="progress" role="status">
+                      <LoaderCircle
+                        className="spin"
+                        size={16}
+                        aria-hidden="true"
+                      />
+                      Reviewing your answer…
+                    </p>
+                  )}
+
+                  {!mockEvaluation && (
+                    <div className="actions">
+                      <button
+                        type="button"
+                        className="ghost-button"
+                        onClick={endMockInterview}
+                        disabled={mockBusy !== null}
+                      >
+                        End interview
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {mockError && <ErrorNote message={mockError} />}
+            </section>
+
+            <aside
+              className="margin"
+              aria-label="This session"
+            >
+              <h2>This session</h2>
+
+              {mockHistory.length === 0 ? (
+                <p className="margin-note">
+                  Your score for each question shows up here
+                  as you go.
+                </p>
+              ) : (
+                <>
+                  <p className="margin-note">
+                    {averageScore !== null
+                      ? `Average ${
+                          Math.round(averageScore * 10) / 10
+                        }/10 over ${scoredRounds.length} ${
+                          scoredRounds.length === 1
+                            ? "answer"
+                            : "answers"
+                        }.`
+                      : "No scored answers yet."}
+                  </p>
+
+                  <ul className="source-list">
+                    {mockHistory.map((round, index) => (
+                      <li
+                        className="source"
+                        key={`${index}-${round.question}`}
+                      >
+                        <div className="source-name clamp">
+                          {round.question}
+                        </div>
+
+                        <div className="history-score">
+                          {round.skipped
+                            ? "Skipped"
+                            : round.score !== null
+                              ? `${round.score}/10`
+                              : "No score"}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </aside>
+          </div>
         )}
       </main>
     </div>
