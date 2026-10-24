@@ -2,7 +2,7 @@
 
 AI-powered placement preparation platform for software engineering interviews.
 
-SmartPrep AI helps students prepare for technical placements through AI-powered chat, RAG-based study assistance, resume analysis, and interview question generation.
+SmartPrep AI helps students prepare for technical placements through AI-powered chat, RAG-based study assistance, resume analysis, interview question generation, and scored mock interviews.
 
 🌐 Live Demo
 
@@ -22,7 +22,11 @@ Uses a RAG pipeline to retrieve relevant information from placement study materi
 
 Generates clear, beginner-friendly answers using Gemini.
 
+Streams the answer as it is generated instead of making the user wait for the full response.
+
 Displays retrieved knowledge-base sources and similarity scores.
+
+Falls back to Google Search through Gemini when the study material does not cover a question, and shows the web links it used.
 
 📚 Retrieval-Augmented Generation (RAG)
 
@@ -60,7 +64,11 @@ Generates placement-focused interview questions using Gemini.
 
 🎤 Mock Interview
 
-Supports an AI-powered mock interview workflow through the backend.
+Pick a topic and difficulty, then answer one question at a time.
+
+Each answer gets a score out of 10 with feedback on what you did well, what you missed, and how to improve.
+
+Questions do not repeat within a session. Skip a question or end the interview at any time.
 
 🏗️ System Architecture
 
@@ -225,10 +233,27 @@ SmartPrepAI/
 │
 ├── client/
 │   └── src/
-│       ├── App.tsx
+│       ├── App.tsx            (layout, navigation, server status)
+│       ├── api.ts             (API URL, streaming chat client)
+│       ├── constants.ts
+│       ├── main.tsx
 │       ├── App.css
-│       ├── index.css
-│       └── main.tsx
+│       ├── index.css          (design tokens)
+│       ├── views/
+│       │   ├── AskView.tsx
+│       │   ├── ResumeView.tsx
+│       │   ├── InterviewView.tsx
+│       │   └── MockInterviewView.tsx
+│       ├── components/
+│       │   ├── CodeBlock.tsx
+│       │   ├── CopyButton.tsx
+│       │   ├── ErrorNote.tsx
+│       │   ├── ResultPanel.tsx
+│       │   └── Segmented.tsx
+│       └── lib/
+│           ├── format.tsx     (renders AI answers)
+│           ├── mock.ts        (score parsing, error messages)
+│           └── sources.ts
 │
 ├── server/
 │   ├── knowledge-base/
@@ -266,6 +291,20 @@ Example request:
 
 The RAG pipeline retrieves relevant chunks before generating the response.
 
+POST /chat/stream
+
+Same request as POST /chat, but the answer is sent as Server-Sent Events:
+
+meta: where the answer comes from (study notes or the web) and the matched passages
+
+token: a piece of the answer
+
+done: the web links used, if any
+
+error: something went wrong, with a message
+
+The frontend uses this endpoint and falls back to POST /chat if streaming fails.
+
 Resume Analysis
 
 POST /resume/analyze
@@ -288,7 +327,27 @@ Mock Interview
 
 POST /mock-interview/start
 
-Starts an AI-powered mock interview session.
+Example request:
+
+{
+  "topic": "DSA",
+  "difficulty": "Medium",
+  "previousQuestions": ["What is a hash map?"]
+}
+
+Returns one interview question. previousQuestions is optional and stops the same question coming up twice in a session.
+
+POST /mock-interview/evaluate
+
+Example request:
+
+{
+  "topic": "DSA",
+  "question": "What is a hash map?",
+  "answer": "A hash map stores key-value pairs using a hash function..."
+}
+
+Returns a score out of 10 with feedback on what the answer did well, what it missed, and how to improve.
 
 ⚙️ Local Setup
 
@@ -334,7 +393,9 @@ npm run dev
 
 The backend runs locally on:
 
-http://localhost:5000
+http://localhost:10000
+
+(or the port set in the PORT environment variable)
 
 6. Start the frontend
 
@@ -347,6 +408,8 @@ run:
 npm run dev
 
 Open the local Vite URL shown in the terminal.
+
+Note: the frontend calls the deployed backend by default. The address is API_URL in client/src/api.ts. To test against your local backend, change it to http://localhost:10000.
 
 📦 RAG Knowledge Base
 
@@ -432,6 +495,8 @@ Passed retrieved context to Gemini to produce grounded answers.
 
 Built REST APIs using Express.
 
+Streamed model output to the browser with Server-Sent Events, with an automatic fallback to a standard request if streaming fails.
+
 Integrated PDF upload and text extraction for resume analysis.
 
 Deployed frontend and backend independently using Vercel and Render.
@@ -472,8 +537,6 @@ Hybrid search combining semantic and keyword retrieval
 Reranking retrieved chunks
 
 RAG evaluation metrics
-
-Streaming AI responses
 
 Interview performance analytics
 
