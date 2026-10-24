@@ -32,6 +32,47 @@ interface WebSource {
 
 const MODEL = "gemini-3.6-flash";
 
+const STOP_WORDS = new Set(
+  "a an the is are was were be of to in on for and or with what how why does do explain about vs between difference".split(
+    " "
+  )
+);
+
+/**
+ * Picks the sentence of a retrieved passage that shares the most
+ * words with the question, so the user can see why it matched.
+ */
+function makeExcerpt(text: string, question: string): string {
+  const terms = new Set(
+    question
+      .toLowerCase()
+      .split(/[^a-z0-9+#]+/)
+      .filter((word) => word.length > 2 && !STOP_WORDS.has(word))
+  );
+
+  const sentences = text
+    .replace(/\s+/g, " ")
+    .split(/(?<=[.!?])\s+/)
+    .filter((sentence) => sentence.length > 25);
+
+  let best = sentences[0] ?? text.replace(/\s+/g, " ");
+  let bestHits = -1;
+
+  for (const sentence of sentences) {
+    const lower = sentence.toLowerCase();
+    let hits = 0;
+    terms.forEach((term) => {
+      if (lower.includes(term)) hits += 1;
+    });
+    if (hits > bestHits) {
+      best = sentence;
+      bestHits = hits;
+    }
+  }
+
+  return best.length > 320 ? `${best.slice(0, 317)}...` : best;
+}
+
 function buildContext(chunks: RetrievedChunk[]): string {
   return chunks
     .map(
@@ -327,6 +368,7 @@ ${chunk.text}
       source: chunk.source,
       chunkIndex: chunk.chunkIndex,
       score: chunk.score,
+      excerpt: makeExcerpt(chunk.text, question),
     }));
 
     console.log("✅ Answer generated");
@@ -453,6 +495,7 @@ router.post("/stream", async (req, res) => {
             source: chunk.source,
             chunkIndex: chunk.chunkIndex,
             score: chunk.score,
+            excerpt: makeExcerpt(chunk.text, question),
           }))
         : [],
     });

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FileUp, LoaderCircle } from "lucide-react";
 import { API_URL } from "../api";
+import { award, XP } from "../lib/progress";
 import { ErrorNote } from "../components/ErrorNote";
 import { ResultPanel } from "../components/ResultPanel";
 
@@ -36,6 +37,9 @@ export function ResumeView() {
 
       if (data.success) {
         setAnalysis(data.analysis);
+        award("resume", XP.resume, {
+          resume: String(data.analysis ?? "").slice(0, 3000),
+        });
       } else {
         setResumeError(
           data.message ||

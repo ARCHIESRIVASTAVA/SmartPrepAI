@@ -15,6 +15,8 @@ React and TypeScript frontend, built with Vite and deployed on Vercel.
 - `src/views/TitleScreen.tsx` and `StageSelect.tsx`: the opening screen and the level-select map
 - `src/views/`: one component per tab (Ask, Resume, Questions, Mock interview)
 - `src/components/` and `src/lib/`: shared UI pieces and helpers
+- `src/lib/progress.ts`: XP, levels, streak and topic scores saved in localStorage
+- `src/lib/voice.ts` and `src/lib/shareCard.ts`: speech input/output and the share-card image
 - `src/api.ts`: the backend URL and the streaming chat client
 - `src/index.css`: design tokens (colors, fonts)
 - `src/App.css`: layout and component styles

@@ -10,7 +10,8 @@ import {
 import { CopyButton } from "../components/CopyButton";
 import { ErrorNote } from "../components/ErrorNote";
 import { formatAIResponse } from "../lib/format";
-import { hostOf, prettySource } from "../lib/sources";
+import { award, XP } from "../lib/progress";
+import { highlightTerms, hostOf, prettySource } from "../lib/sources";
 
 const EXAMPLE_QUESTIONS = [
   "Explain how paging works in an operating system",
@@ -31,6 +32,7 @@ export function AskView() {
   const [webSources, setWebSources] =
     useState<WebSource[]>([]);
   const [chatError, setChatError] = useState("");
+  const [askedQuestion, setAskedQuestion] = useState("");
   const questionInput =
     useRef<HTMLTextAreaElement>(null);
 
@@ -38,6 +40,7 @@ export function AskView() {
     if (!message.trim()) return;
 
     setChatLoading(true);
+    setAskedQuestion(message.trim());
     setReply("");
     setSources([]);
     setSourceType(null);
@@ -53,7 +56,10 @@ export function AskView() {
         },
         onToken: (text) =>
           setReply((previous) => previous + text),
-        onDone: (info) => setWebSources(info.webSources),
+        onDone: (info) => {
+          setWebSources(info.webSources);
+          award("ask", XP.ask);
+        },
         // Any text that already arrived stays on screen;
         // the error is shown separately underneath it.
         onError: (errorMessage) => setChatError(errorMessage),
@@ -86,6 +92,7 @@ export function AskView() {
           setSources(data.sources || []);
           setSourceType(data.sourceType ?? null);
           setWebSources(data.webSources || []);
+          award("ask", XP.ask);
         } else {
           setChatError(
             data.message ||
@@ -152,6 +159,25 @@ export function AskView() {
                       {percent}% match
                     </span>
                   </div>
+
+                  {item.excerpt && (
+                    <details className="why">
+                      <summary>Why this matched</summary>
+
+                      <p>
+                        {highlightTerms(
+                          item.excerpt,
+                          askedQuestion
+                        ).map((piece, i) =>
+                          piece.hit ? (
+                            <mark key={i}>{piece.text}</mark>
+                          ) : (
+                            piece.text
+                          )
+                        )}
+                      </p>
+                    </details>
+                  )}
                 </li>
               );
             })}

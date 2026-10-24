@@ -18,6 +18,15 @@ const ai = new GoogleGenAI({
   apiKey,
 });
 
+const COMPANY_STYLES: Record<string, string> = {
+  "Service company":
+    "Typical campus drive for an IT services company (TCS, Infosys, Wipro style): fundamentals, aptitude-flavoured logic, basic coding and DBMS/OS/OOP definitions.",
+  "Product company":
+    "Product-company technical round: problem solving, optimisation, time and space complexity, and clean reasoning about trade-offs.",
+  Startup:
+    "Startup round: practical, hands-on questions about building and debugging real features, with an emphasis on full-stack thinking.",
+};
+
 /*
   START MOCK INTERVIEW
   Generates the first interview question
@@ -29,7 +38,36 @@ router.post("/start", async (req, res) => {
       topic = "DSA",
       difficulty = "Medium",
       previousQuestions = [],
+      company,
+      resume,
     } = req.body;
+
+    // Optional interview styles. Only known names are used, so a
+    // client cannot put arbitrary text into the prompt this way.
+    const style =
+      typeof company === "string"
+        ? COMPANY_STYLES[company]
+        : undefined;
+
+    // Optional resume analysis, so the interviewer can ask about
+    // the candidate's own projects and skills.
+    const resumeNotes =
+      typeof resume === "string" && resume.trim()
+        ? resume.trim().slice(0, 3000)
+        : "";
+
+    const styleBlock = style
+      ? `
+Interview style: ${style}
+`
+      : "";
+
+    const resumeBlock = resumeNotes
+      ? `
+The candidate's resume analysis is below. Where it fits the topic, ask about the candidate's own projects, skills or gaps instead of a generic question:
+${resumeNotes}
+`
+      : "";
 
     // Optional: questions already asked in this session, so a
     // multi-round interview does not repeat itself. Capped so a
@@ -58,7 +96,7 @@ Topic: ${topic}
 Difficulty: ${difficulty}
 
 Ask ONE technical interview question.
-${avoidRepeats}
+${styleBlock}${resumeBlock}${avoidRepeats}
 Rules:
 - The question should be suitable for a software engineering placement.
 - Do not give the answer.

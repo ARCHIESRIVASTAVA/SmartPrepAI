@@ -1,11 +1,14 @@
 import { useState } from "react";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, Mic, Square, Volume2 } from "lucide-react";
 import { API_URL } from "../api";
 import { CopyButton } from "../components/CopyButton";
 import { ErrorNote } from "../components/ErrorNote";
 import { Segmented } from "../components/Segmented";
+import { WeakSpot } from "../components/WeakSpot";
 import { DIFFICULTIES, TOPICS } from "../constants";
 import { formatAIResponse } from "../lib/format";
+import { award, useProgress } from "../lib/progress";
+import { canListen, canSpeak, speak, useDictation } from "../lib/voice";
 import {
   friendlyError,
   parseScore,
@@ -20,7 +23,17 @@ type MockRound = {
   skipped?: boolean;
 };
 
+const COMPANIES = [
+  "Standard",
+  "Service company",
+  "Product company",
+  "Startup",
+];
+
 export function MockInterviewView() {
+  const progress = useProgress();
+  const [company, setCompany] = useState("Standard");
+  const [useResume, setUseResume] = useState(false);
   const [mockTopic, setMockTopic] = useState("DSA");
   const [mockDifficulty, setMockDifficulty] =
     useState("Medium");
@@ -36,6 +49,12 @@ export function MockInterviewView() {
     "start" | "evaluate" | null
   >(null);
   const [mockError, setMockError] = useState("");
+
+  const dictation = useDictation((text) =>
+    setMockAnswer((previous) =>
+      previous ? `${previous} ${text}` : text
+    )
+  );
 
   // Fetches the next question. `rounds` is the session so far,
   // sent to the server so it does not repeat a question.
@@ -59,6 +78,9 @@ export function MockInterviewView() {
             previousQuestions: rounds.map(
               (round) => round.question
             ),
+            ...(company !== "Standard" && { company }),
+            ...(useResume &&
+              progress.resume && { resume: progress.resume }),
           }),
         }
       );
@@ -126,6 +148,12 @@ export function MockInterviewView() {
         data.evaluation.trim()
       ) {
         setMockEvaluation(data.evaluation);
+
+        const score = parseScore(data.evaluation);
+        award("mock", score === null ? 10 : score * 10, {
+          topic: mockTopic,
+          ...(score !== null && { score }),
+        });
         setMockHistory((rounds) => [
           ...rounds,
           {
@@ -199,12 +227,17 @@ export function MockInterviewView() {
           <p>
             Answer one question at a time, then get a
             score and feedback on what you missed.
-            Nothing is saved after you leave the page.
+            Scores earn XP and are saved in this browser.
           </p>
         </header>
 
         {!mockQuestion ? (
           <>
+            <WeakSpot
+              current={mockTopic}
+              onPick={setMockTopic}
+            />
+
             <div className="controls">
               <label className="field">
                 <span className="field-label">
@@ -234,7 +267,28 @@ export function MockInterviewView() {
                 options={DIFFICULTIES}
                 onChange={setMockDifficulty}
               />
+
+              <Segmented
+                label="Interview style"
+                value={company}
+                options={COMPANIES}
+                onChange={setCompany}
+              />
             </div>
+
+            {progress.resume && (
+              <label className="check-row">
+                <input
+                  type="checkbox"
+                  checked={useResume}
+                  onChange={(e) =>
+                    setUseResume(e.target.checked)
+                  }
+                />
+                Ask about my resume (from your last Resume
+                scan)
+              </label>
+            )}
 
             <div className="actions">
               <button
@@ -265,6 +319,17 @@ export function MockInterviewView() {
               </span>
 
               <p>{mockQuestion}</p>
+
+              {canSpeak() && (
+                <button
+                  type="button"
+                  className="ghost-button"
+                  onClick={() => speak(mockQuestion)}
+                >
+                  <Volume2 size={15} aria-hidden="true" />
+                  Read aloud
+                </button>
+              )}
             </div>
 
             {!mockEvaluation ? (
@@ -294,6 +359,28 @@ export function MockInterviewView() {
                   </span>
 
                   <div className="bar-actions">
+                    {canListen() && (
+                      <button
+                        type="button"
+                        className="ghost-button"
+                        onClick={
+                          dictation.listening
+                            ? dictation.stop
+                            : dictation.start
+                        }
+                        aria-pressed={dictation.listening}
+                      >
+                        {dictation.listening ? (
+                          <Square size={14} aria-hidden="true" />
+                        ) : (
+                          <Mic size={15} aria-hidden="true" />
+                        )}
+                        {dictation.listening
+                          ? "Stop"
+                          : "Speak answer"}
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       className="ghost-button"

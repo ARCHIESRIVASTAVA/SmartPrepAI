@@ -4,6 +4,8 @@ export type Source = {
   source: string;
   chunkIndex: number;
   score: number;
+  /** the sentence of the passage that best matches the question */
+  excerpt?: string;
 };
 
 export type SourceType = "study_material" | "web";

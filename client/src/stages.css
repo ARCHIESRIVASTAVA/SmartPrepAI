@@ -405,11 +405,10 @@
   justify-self: center;
   width: min(640px, 100%);
   padding: 22px 26px;
-  background: rgba(21, 28, 43, 0.82);
+  background: rgba(21, 28, 43, 0.94);
   border: 1px solid var(--line-strong);
   border-left: 3px solid var(--accent);
   border-radius: 6px;
-  backdrop-filter: blur(6px);
   animation: briefing-in 0.35s ease both;
   display: grid;
   gap: 8px;
@@ -524,4 +523,173 @@ button.brand:hover .brand-name { color: var(--accent); }
   .map-hint { display: none; }
   .bar { height: 5vh; }
   .stage-select { padding-top: calc(5vh + 14px); padding-bottom: calc(5vh + 14px); }
+}
+
+/* ---------- progress: HUD, stars, profile ---------- */
+
+.map-right {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.hud {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 5px 12px;
+  cursor: pointer;
+  font: 600 0.75rem var(--mono);
+  color: var(--accent);
+}
+
+.hud:hover { border-color: var(--accent); }
+
+.hud-xp {
+  width: 64px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.hud-xp span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.5s ease;
+}
+
+.hud-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--text-2);
+}
+
+.node-stars {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  margin-top: 4px;
+  color: var(--line-strong);
+}
+
+.node-stars .on {
+  color: var(--accent);
+  fill: var(--accent);
+}
+
+.node:has(.node-orb svg.lucide-lock) {
+  opacity: 0.55;
+}
+
+.briefing-lock,
+.briefing-tip {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 400 0.78rem var(--mono);
+  color: var(--text-2);
+}
+
+.briefing-tip { color: var(--text-3); }
+
+.profile-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(5, 8, 15, 0.9);
+  animation: screen-in 0.25s ease both;
+}
+
+.profile {
+  width: min(460px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  padding: 22px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+}
+
+.profile header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.profile h3 {
+  margin: 0;
+  display: grid;
+  font-size: 1.4rem;
+}
+
+.profile h3 small {
+  font: 400 0.72rem var(--mono);
+  color: var(--text-3);
+}
+
+.radar { width: min(300px, 100%); }
+.radar-ring { fill: none; stroke: var(--line-strong); stroke-width: 1; }
+.radar-shape {
+  fill: rgba(245, 196, 81, 0.25);
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+.radar-label { fill: var(--text-2); font: 500 10px var(--mono); }
+
+.profile-note {
+  margin: 0;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-3);
+}
+
+.profile-stats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.profile-stats li {
+  font: 400 0.75rem var(--mono);
+  padding: 3px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--text-2);
+}
+
+.profile-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+@media (max-width: 760px) {
+  .map-right { gap: 10px; }
+  .hud-xp { width: 40px; }
+  .node-stars { justify-content: flex-start; }
+}
+
+@media (max-width: 760px) {
+  .map-head h2 { display: none; }
+  .map-back, .hud, .hud-level { white-space: nowrap; }
 }

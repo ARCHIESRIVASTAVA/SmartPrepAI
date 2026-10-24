@@ -1,11 +1,25 @@
 import { useEffect, useState } from "react";
 import {
+  Flame,
+  Lock,
+  Star,
   FileSearch,
   ListChecks,
   MessageSquare,
   Mic,
   type LucideIcon,
 } from "lucide-react";
+import { SkillRadar } from "../components/SkillRadar";
+import { TOPICS } from "../constants";
+import {
+  bossUnlocked,
+  levelInfo,
+  resetProgress,
+  stars,
+  useProgress,
+  weakestTopic,
+} from "../lib/progress";
+import { makeShareCard } from "../lib/shareCard";
 import type { ServerState, Tab } from "../types";
 
 type Stage = {
@@ -72,10 +86,19 @@ type Props = {
 export function StageSelect({ serverState, onLaunch, onBack }: Props) {
   const [index, setIndex] = useState(0);
   const [launching, setLaunching] = useState<Tab | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  const progress = useProgress();
+  const info = levelInfo(progress.xp);
+  const unlocked = bossUnlocked(progress);
+  const weak = weakestTopic(progress, TOPICS);
 
   const stage = STAGES[index];
 
+  const locked = (id: Tab) => id === "mock" && !unlocked;
+
   const launch = (id: Tab) => {
+    if (locked(id)) return;
     setLaunching(id);
     // Short zoom-in before the tool opens.
     window.setTimeout(() => onLaunch(id), 380);
@@ -85,6 +108,11 @@ export function StageSelect({ serverState, onLaunch, onBack }: Props) {
     if (launching) return;
 
     const onKey = (event: KeyboardEvent) => {
+      if (profileOpen) {
+        if (event.key === "Escape") setProfileOpen(false);
+        return;
+      }
+
       const target = event.target as HTMLElement | null;
       if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
 
@@ -103,6 +131,8 @@ export function StageSelect({ serverState, onLaunch, onBack }: Props) {
         launch(STAGES[index].id);
       } else if (event.key === "Escape") {
         onBack();
+      } else if (event.key === "p" || event.key === "P") {
+        setProfileOpen(true);
       }
     };
 
@@ -127,6 +157,27 @@ export function StageSelect({ serverState, onLaunch, onBack }: Props) {
 
         <h2>Select stage</h2>
 
+        <div className="map-right">
+        <button
+          type="button"
+          className="hud"
+          onClick={() => setProfileOpen(true)}
+          aria-label={`Level ${info.level}, ${progress.xp} XP. Open profile`}
+        >
+          <span className="hud-level">LV {info.level}</span>
+
+          <span className="hud-xp" aria-hidden="true">
+            <span style={{ width: `${info.fraction * 100}%` }} />
+          </span>
+
+          {progress.streak > 0 && (
+            <span className="hud-streak">
+              <Flame size={13} aria-hidden="true" />
+              {progress.streak}
+            </span>
+          )}
+        </button>
+
         <span className="map-status">
           <span
             className={`status-dot status-${serverState}`}
@@ -138,6 +189,7 @@ export function StageSelect({ serverState, onLaunch, onBack }: Props) {
               ? "Offline"
               : "Starting"}
         </span>
+        </div>
       </header>
 
       <div className="map-track" role="listbox" aria-label="Stages">
@@ -167,12 +219,32 @@ export function StageSelect({ serverState, onLaunch, onBack }: Props) {
               onDoubleClick={() => launch(item.id)}
             >
               <span className="node-orb">
-                <Icon size={selected ? 26 : 22} aria-hidden="true" />
+                {locked(item.id) ? (
+                  <Lock size={20} aria-hidden="true" />
+                ) : (
+                  <Icon size={selected ? 26 : 22} aria-hidden="true" />
+                )}
               </span>
 
               <span className="node-label">
                 <span className="node-num">Stage {item.number}</span>
                 <span className="node-name">{item.name}</span>
+
+                <span
+                  className="node-stars"
+                  aria-label={`${stars(progress.clears[item.id])} of 3 stars`}
+                >
+                  {[1, 2, 3].map((n) => (
+                    <Star
+                      key={n}
+                      size={13}
+                      aria-hidden="true"
+                      className={
+                        n <= stars(progress.clears[item.id]) ? "on" : ""
+                      }
+                    />
+                  ))}
+                </span>
               </span>
             </button>
           );
@@ -194,19 +266,116 @@ export function StageSelect({ serverState, onLaunch, onBack }: Props) {
           ))}
         </ul>
 
-        <button
-          type="button"
-          className="enter-stage"
-          onClick={() => launch(stage.id)}
-        >
-          Enter stage
-        </button>
+        {locked(stage.id) ? (
+          <p className="briefing-lock">
+            <Lock size={14} aria-hidden="true" /> Clear stages 01 to 03
+            once each to unlock the boss.
+          </p>
+        ) : (
+          <button
+            type="button"
+            className="enter-stage"
+            onClick={() => launch(stage.id)}
+          >
+            Enter stage
+          </button>
+        )}
+
+        {(stage.id === "interview" || stage.id === "mock") && (
+          <p className="briefing-tip">
+            {weak.average === null
+              ? `Tip: you haven't tried ${weak.topic} yet.`
+              : `Tip: your weakest topic is ${weak.topic} (${
+                  Math.round(weak.average * 10) / 10
+                }/10).`}
+          </p>
+        )}
       </article>
 
       <p className="map-hint">
         <kbd>←</kbd> <kbd>→</kbd> move · <kbd>1</kbd>–<kbd>4</kbd> jump ·{" "}
-        <kbd>Enter</kbd> start · <kbd>Esc</kbd> back
+        <kbd>Enter</kbd> start · <kbd>P</kbd> profile · <kbd>Esc</kbd> back
       </p>
+
+      {profileOpen && (
+        <div
+          className="profile-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Player profile"
+          onClick={() => setProfileOpen(false)}
+        >
+          <div className="profile" onClick={(e) => e.stopPropagation()}>
+            <header>
+              <h3>
+                Level {info.level}
+                <small>
+                  {info.into}/{info.needed} XP to next level
+                </small>
+              </h3>
+
+              <button
+                type="button"
+                className="ghost-button"
+                autoFocus
+                onClick={() => setProfileOpen(false)}
+              >
+                Close
+              </button>
+            </header>
+
+            <SkillRadar progress={progress} />
+
+            <p className="profile-note">
+              Radar shows your average mock-interview score per topic.
+              {progress.clears.mock === 0 &&
+                " Finish a mock interview answer to fill it in."}
+            </p>
+
+            <ul className="profile-stats">
+              <li>{progress.xp} XP</li>
+              <li>{progress.streak} day streak</li>
+              <li>{progress.clears.ask} answers</li>
+              <li>{progress.clears.mock} mock answers</li>
+            </ul>
+
+            <div className="profile-actions">
+              <button
+                type="button"
+                className="enter-stage"
+                onClick={async () => {
+                  const blob = await makeShareCard(progress);
+                  if (!blob) return;
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "smartprep-card.png";
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                Download share card
+              </button>
+
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => {
+                  if (window.confirm("Reset all progress on this browser?")) {
+                    resetProgress();
+                  }
+                }}
+              >
+                Reset progress
+              </button>
+            </div>
+
+            <p className="profile-note">
+              Progress is saved in this browser only.
+            </p>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

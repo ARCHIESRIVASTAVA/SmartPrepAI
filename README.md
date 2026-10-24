@@ -18,6 +18,20 @@ GitHub: https://github.com/ARCHIESRIVASTAVA/SmartPrepAI
 
 Cinematic title screen that wakes the server while it loads, then a stage-select map for the four tools. Arrow keys, 1-4, Enter and Esc all work, as do mouse and touch.
 
+🏆 Progress and personalisation
+
+XP, levels, a daily streak and stars on each stage. The mock interview boss unlocks after you clear the first three stages.
+
+A skill radar shows your average mock-interview score per topic, and the app suggests your weakest topic.
+
+Mock interviews can follow a service-company, product-company or startup style, and can ask about your own resume (from your last Resume scan).
+
+Answer by voice and have questions read aloud (browser speech, best in Chrome and Edge).
+
+Download a share card with your level and topic scores.
+
+Progress is stored in the browser (localStorage), not on the server.
+
 🤖 AI Placement Assistant
 
 Ask questions about DSA, OOP, DBMS, Operating Systems, Computer Networks, SQL and interviews.
@@ -28,7 +42,7 @@ Generates clear, beginner-friendly answers using Gemini.
 
 Streams the answer as it is generated instead of making the user wait for the full response.
 
-Displays retrieved knowledge-base sources and similarity scores.
+Displays retrieved knowledge-base sources and similarity scores, with a "Why this matched" excerpt that highlights the words shared with your question.
 
 Falls back to Google Search through Gemini when the study material does not cover a question, and shows the web links it used.
 

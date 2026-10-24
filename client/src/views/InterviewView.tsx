@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { LoaderCircle } from "lucide-react";
 import { API_URL } from "../api";
+import { award, XP } from "../lib/progress";
 import { ErrorNote } from "../components/ErrorNote";
 import { ResultPanel } from "../components/ResultPanel";
 import { Segmented } from "../components/Segmented";
+import { WeakSpot } from "../components/WeakSpot";
 import { DIFFICULTIES, TOPICS } from "../constants";
 
 const QUESTION_COUNTS = [3, 5, 10];
@@ -43,6 +45,7 @@ export function InterviewView() {
 
       if (data.success) {
         setQuestions(data.questions);
+        award("interview", XP.interview);
       } else {
         setInterviewError(
           data.message ||
@@ -77,7 +80,9 @@ export function InterviewView() {
         </p>
       </header>
 
-      <div className="controls">
+      <WeakSpot current={topic} onPick={setTopic} />
+
+        <div className="controls">
         <label className="field">
           <span className="field-label">Topic</span>
 
