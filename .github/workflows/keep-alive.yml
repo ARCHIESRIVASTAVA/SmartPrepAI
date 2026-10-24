@@ -1,0 +1,15 @@
+# Pings the Render backend so the free tier does not go to sleep,
+# which is what makes the first request slow.
+name: Keep backend awake
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend
+        run: curl -fsS --max-time 60 --retry 3 --retry-delay 10 https://smartprepai-5ujb.onrender.com/
