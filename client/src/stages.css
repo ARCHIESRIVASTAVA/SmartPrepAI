@@ -80,23 +80,6 @@
   to { top: 100%; }
 }
 
-.bar {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 9vh;
-  background: #05080f;
-  z-index: 2;
-  animation: bar-in 1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-
-.bar-top { top: 0; transform-origin: top; }
-.bar-bottom { bottom: 0; transform-origin: bottom; }
-
-@keyframes bar-in {
-  from { height: 50vh; }
-}
-
 /* ---------- title ---------- */
 
 .title-center {
@@ -223,7 +206,7 @@
 
 .title-foot {
   position: absolute;
-  bottom: 11vh;
+  bottom: 4vh;
   left: 0;
   right: 0;
   text-align: center;
@@ -238,8 +221,9 @@
 /* ---------- stage select ---------- */
 
 .stage-select {
-  grid-template-rows: auto 1fr auto auto;
-  padding: calc(9vh + 18px) clamp(18px, 5vw, 64px) calc(9vh + 14px);
+  grid-template-rows: 1fr auto auto 1fr;
+  align-content: stretch;
+  padding: clamp(22px, 5vh, 48px) clamp(18px, 5vw, 64px) clamp(18px, 4vh, 36px);
   gap: 18px;
   transition: transform 0.4s ease, opacity 0.4s ease;
 }
@@ -526,8 +510,7 @@ button.brand:hover .brand-name { color: var(--accent); }
   .node.is-selected .node-orb { width: 58px; height: 58px; }
   .node.is-selected { transform: none; }
   .map-hint { display: none; }
-  .bar { height: 5vh; }
-  .stage-select { padding-top: calc(5vh + 14px); padding-bottom: calc(5vh + 14px); }
+  .stage-select { padding-top: 18px; padding-bottom: 18px; }
 }
 
 /* ---------- progress: HUD, stars, profile ---------- */
@@ -697,4 +680,27 @@ button.brand:hover .brand-name { color: var(--accent); }
 @media (max-width: 760px) {
   .map-head h2 { display: none; }
   .map-back, .hud, .hud-level { white-space: nowrap; }
+}
+
+/* map: stages and briefing sit together in the middle of the screen */
+.stage-select .map-head {
+  position: absolute;
+  top: clamp(18px, 3.5vh, 36px);
+  left: clamp(18px, 5vw, 64px);
+  right: clamp(18px, 5vw, 64px);
+}
+.stage-select .map-track { grid-row: 2; align-self: end; margin-bottom: clamp(24px, 5vh, 56px); }
+.stage-select .briefing { grid-row: 3; }
+.stage-select .map-hint {
+  position: absolute;
+  bottom: clamp(12px, 3vh, 28px);
+  left: 0;
+  right: 0;
+}
+
+@media (max-width: 760px) {
+  .stage-select { grid-template-rows: auto auto auto auto; align-content: start; }
+  .stage-select .map-head { position: relative; top: auto; left: auto; right: auto; }
+  .stage-select .map-track { grid-row: auto; margin-bottom: 0; align-self: center; }
+  .stage-select .briefing { grid-row: auto; }
 }

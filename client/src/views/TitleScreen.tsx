@@ -38,8 +38,6 @@ export function TitleScreen({ serverState, onStart }: Props) {
       <div className="fx-grid" aria-hidden="true" />
       <div className="fx-glow" aria-hidden="true" />
       <div className="fx-scan" aria-hidden="true" />
-      <div className="bar bar-top" aria-hidden="true" />
-      <div className="bar bar-bottom" aria-hidden="true" />
 
       <div className="title-center">
         <div className="title-pip">

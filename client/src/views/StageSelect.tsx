@@ -183,8 +183,6 @@ export function StageSelect({ serverState, onLaunch, onBack }: Props) {
     >
       <div className="fx-grid" aria-hidden="true" />
       <div className="fx-glow" aria-hidden="true" />
-      <div className="bar bar-top" aria-hidden="true" />
-      <div className="bar bar-bottom" aria-hidden="true" />
 
       <header className="map-head">
         <button type="button" className="map-back" onClick={onBack}>
