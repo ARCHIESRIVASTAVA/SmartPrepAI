@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import {
+  Layers,
+  Presentation,
+  Zap,
   Flame,
   Lock,
   Star,
@@ -45,8 +48,38 @@ const STAGES: Stage[] = [
     Icon: MessageSquare,
   },
   {
-    id: "resume",
+    id: "cards",
     number: "02",
+    name: "Flashcards",
+    place: "The Vault",
+    blurb:
+      "Flip through an AI-built deck on any topic. Mark what you knew, and the cards you missed come back.",
+    perks: ["Any topic", "5 to 15 cards", "Missed cards repeat"],
+    Icon: Layers,
+  },
+  {
+    id: "slides",
+    number: "03",
+    name: "Slides",
+    place: "The Lecture Hall",
+    blurb:
+      "Get a short study deck on a topic, flip through it with the arrow keys, and download it as a PowerPoint file.",
+    perks: ["7 slides", "Your own topic", "Download .pptx"],
+    Icon: Presentation,
+  },
+  {
+    id: "quiz",
+    number: "04",
+    name: "Quiz blitz",
+    place: "The Gauntlet",
+    blurb:
+      "Ten timed multiple-choice questions, three lives. Streaks and quick answers score extra.",
+    perks: ["20s per question", "3 lives", "Streak bonus"],
+    Icon: Zap,
+  },
+  {
+    id: "resume",
+    number: "05",
     name: "Resume",
     place: "The Scanner",
     blurb:
@@ -56,7 +89,7 @@ const STAGES: Stage[] = [
   },
   {
     id: "interview",
-    number: "03",
+    number: "06",
     name: "Questions",
     place: "The Forge",
     blurb:
@@ -66,7 +99,7 @@ const STAGES: Stage[] = [
   },
   {
     id: "mock",
-    number: "04",
+    number: "07",
     name: "Mock interview",
     place: "The Arena",
     blurb:
@@ -122,7 +155,7 @@ export function StageSelect({ serverState, onLaunch, onBack }: Props) {
       } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
         event.preventDefault();
         setIndex((i) => Math.max(0, i - 1));
-      } else if (event.key >= "1" && event.key <= "4") {
+      } else if (event.key >= "1" && event.key <= "7") {
         setIndex(Number(event.key) - 1);
       } else if (event.key === "Enter") {
         // Let a focused button handle its own Enter.
@@ -268,7 +301,7 @@ export function StageSelect({ serverState, onLaunch, onBack }: Props) {
 
         {locked(stage.id) ? (
           <p className="briefing-lock">
-            <Lock size={14} aria-hidden="true" /> Clear stages 01 to 03
+            <Lock size={14} aria-hidden="true" /> Clear Ask, Resume and Questions
             once each to unlock the boss.
           </p>
         ) : (
@@ -293,7 +326,7 @@ export function StageSelect({ serverState, onLaunch, onBack }: Props) {
       </article>
 
       <p className="map-hint">
-        <kbd>←</kbd> <kbd>→</kbd> move · <kbd>1</kbd>–<kbd>4</kbd> jump ·{" "}
+        <kbd>←</kbd> <kbd>→</kbd> move · <kbd>1</kbd>–<kbd>7</kbd> jump ·{" "}
         <kbd>Enter</kbd> start · <kbd>P</kbd> profile · <kbd>Esc</kbd> back
       </p>
 

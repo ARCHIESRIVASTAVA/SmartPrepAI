@@ -1,4 +1,11 @@
-export type Tab = "ask" | "resume" | "interview" | "mock";
+export type Tab =
+  | "ask"
+  | "cards"
+  | "slides"
+  | "quiz"
+  | "resume"
+  | "interview"
+  | "mock";
 
 export type ServerState = "checking" | "waking" | "ready" | "offline";
 

@@ -289,9 +289,9 @@
   z-index: 3;
   align-self: center;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   align-items: center;
-  max-width: 980px;
+  max-width: 1120px;
   width: 100%;
   margin: 0 auto;
   min-height: 220px;
@@ -299,8 +299,8 @@
 
 .map-path {
   position: absolute;
-  left: 12.5%;
-  right: 12.5%;
+  left: 7.14%;
+  right: 7.14%;
   top: 50%;
   height: 3px;
   margin-top: -34px;
@@ -338,10 +338,14 @@
 .node:nth-child(2) { animation-delay: 0.1s; }
 .node:nth-child(3) { animation-delay: 0.2s; }
 .node:nth-child(4) { animation-delay: 0.3s; }
+.node:nth-child(5) { animation-delay: 0.4s; }
+.node:nth-child(6) { animation-delay: 0.5s; }
+.node:nth-child(7) { animation-delay: 0.6s; }
+.node:nth-child(8) { animation-delay: 0.7s; }
 
 .node-orb {
-  width: 68px;
-  height: 68px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -371,7 +375,8 @@
 
 .node-name {
   font-weight: 650;
-  font-size: 1rem;
+  font-size: 0.92rem;
+  line-height: 1.2;
 }
 
 .node.is-selected {
@@ -380,8 +385,8 @@
 }
 
 .node.is-selected .node-orb {
-  width: 84px;
-  height: 84px;
+  width: 72px;
+  height: 72px;
   border-color: var(--accent);
   color: var(--accent);
   background: var(--raised);

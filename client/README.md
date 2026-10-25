@@ -13,7 +13,7 @@ React and TypeScript frontend, built with Vite and deployed on Vercel.
 
 - `src/App.tsx`: layout, tab navigation and the server status light
 - `src/views/TitleScreen.tsx` and `StageSelect.tsx`: the opening screen and the level-select map
-- `src/views/`: one component per tab (Ask, Resume, Questions, Mock interview)
+- `src/views/`: one component per tab (Ask, Flashcards, Slides, Quiz blitz, Resume, Questions, Mock interview)
 - `src/components/` and `src/lib/`: shared UI pieces and helpers
 - `src/lib/progress.ts`: XP, levels, streak and topic scores saved in localStorage
 - `src/lib/voice.ts` and `src/lib/shareCard.ts`: speech input/output and the share-card image
@@ -24,5 +24,5 @@ React and TypeScript frontend, built with Vite and deployed on Vercel.
 ## Notes
 
 - The backend address is `API_URL` in `src/api.ts`. Change it to `http://localhost:10000` to test against a local server.
-- All four views stay mounted and are hidden when inactive, so an unfinished answer, upload or interview survives switching tabs.
+- All views stay mounted and are hidden when inactive, so an unfinished answer, upload or interview survives switching tabs.
 - Fonts (Schibsted Grotesk and IBM Plex Mono) are bundled with `@fontsource`, so the page makes no external font requests.

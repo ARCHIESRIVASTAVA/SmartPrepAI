@@ -1,0 +1,181 @@
+import { Router } from "express";
+import dotenv from "dotenv";
+import { GoogleGenAI } from "@google/genai";
+import {
+  clampCount,
+  cleanTopic,
+  parseJson,
+  validateFlashcards,
+  validateQuiz,
+  validateSlides,
+} from "./studyParse";
+
+dotenv.config();
+
+const router = Router();
+
+const apiKey = process.env.GEMINI_API_KEY;
+
+if (!apiKey) {
+  throw new Error("❌ GEMINI_API_KEY not found in .env");
+}
+
+const ai = new GoogleGenAI({ apiKey });
+
+const MODEL = "gemini-3.6-flash";
+
+/**
+ * Asks Gemini for JSON and validates it. Tries twice because the
+ * model occasionally returns malformed JSON.
+ */
+async function generate<T>(
+  prompt: string,
+  validate: (value: unknown) => T[],
+  minimum: number
+): Promise<T[]> {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents: prompt,
+      config: { responseMimeType: "application/json" },
+    });
+
+    const items = validate(parseJson(response.text));
+
+    if (items.length >= minimum) return items;
+  }
+
+  return [];
+}
+
+function fail(res: any, error: any, fallback: string) {
+  console.error("❌ STUDY ERROR:", error);
+
+  return res.status(500).json({
+    success: false,
+    message: error?.message || fallback,
+  });
+}
+
+/* FLASHCARDS */
+
+router.post("/flashcards", async (req, res) => {
+  try {
+    const topic = cleanTopic(req.body?.topic);
+    const count = clampCount(req.body?.count, 3, 20, 10);
+
+    const prompt = `
+You are creating flashcards for a software engineering placement interview.
+
+Topic: ${topic}
+
+Create ${count} flashcards. Each has a short question on the front and a
+clear, correct answer on the back (1 to 3 sentences, include a tiny example
+if it helps). Cover the most commonly asked ideas, from basic to harder.
+
+Return ONLY JSON in this shape:
+[{"q": "question", "a": "answer"}]
+`;
+
+    const cards = await generate(prompt, validateFlashcards, 1);
+
+    if (cards.length === 0) {
+      return res.status(502).json({
+        success: false,
+        message: "Couldn't build a deck this time. Try again.",
+      });
+    }
+
+    return res.status(200).json({ success: true, topic, cards });
+  } catch (error) {
+    return fail(res, error, "Failed to generate flashcards");
+  }
+});
+
+/* SLIDES */
+
+router.post("/slides", async (req, res) => {
+  try {
+    const topic = cleanTopic(req.body?.topic);
+
+    const prompt = `
+You are a teacher preparing a short slide deck so a student can learn
+"${topic}" for a software engineering placement interview.
+
+Create 7 slides:
+1. Title-style overview slide
+2-6. Key ideas, each with a clear title and 3 to 5 short bullet points
+7. "Common interview questions" slide with 3 to 4 bullets
+
+Rules:
+- Bullets are short phrases or one sentence, not paragraphs.
+- Be technically correct and specific.
+- "note" is one optional sentence of speaker advice, such as a mnemonic or a common mistake.
+
+Return ONLY JSON in this shape:
+[{"title": "string", "bullets": ["string"], "note": "string"}]
+`;
+
+    const slides = await generate(prompt, validateSlides, 3);
+
+    if (slides.length === 0) {
+      return res.status(502).json({
+        success: false,
+        message: "Couldn't build the slides this time. Try again.",
+      });
+    }
+
+    return res.status(200).json({ success: true, topic, slides });
+  } catch (error) {
+    return fail(res, error, "Failed to generate slides");
+  }
+});
+
+/* QUIZ */
+
+router.post("/quiz", async (req, res) => {
+  try {
+    const topic = cleanTopic(req.body?.topic);
+    const difficulty = ["Easy", "Medium", "Hard"].includes(
+      req.body?.difficulty
+    )
+      ? req.body.difficulty
+      : "Medium";
+    const count = clampCount(req.body?.count, 3, 15, 10);
+
+    const prompt = `
+You are writing a multiple-choice quiz for a software engineering placement test.
+
+Topic: ${topic}
+Difficulty: ${difficulty}
+
+Write ${count} questions. Each has exactly 4 options, exactly one correct.
+Make wrong options plausible. Vary which position is correct.
+"answer" is the 0-based index of the correct option.
+"explanation" is one or two sentences on why it is correct.
+
+Return ONLY JSON in this shape:
+[{"q": "string", "options": ["a","b","c","d"], "answer": 0, "explanation": "string"}]
+`;
+
+    const questions = await generate(prompt, validateQuiz, 3);
+
+    if (questions.length === 0) {
+      return res.status(502).json({
+        success: false,
+        message: "Couldn't build the quiz this time. Try again.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      topic,
+      difficulty,
+      questions,
+    });
+  } catch (error) {
+    return fail(res, error, "Failed to generate quiz");
+  }
+});
+
+export default router;

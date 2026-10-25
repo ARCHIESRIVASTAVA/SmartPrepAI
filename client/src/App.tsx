@@ -2,9 +2,12 @@ import { useEffect, useState } from "react";
 import {
   FileSearch,
   Highlighter,
+  Layers,
   ListChecks,
   MessageSquare,
   Mic,
+  Presentation,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { API_URL } from "./api";
@@ -12,14 +15,21 @@ import type { Screen, ServerState, Tab } from "./types";
 import { StageSelect } from "./views/StageSelect";
 import { TitleScreen } from "./views/TitleScreen";
 import { AskView } from "./views/AskView";
+import { FlashcardsView } from "./views/FlashcardsView";
+import { QuizView } from "./views/QuizView";
+import { SlidesView } from "./views/SlidesView";
 import { InterviewView } from "./views/InterviewView";
 import { MockInterviewView } from "./views/MockInterviewView";
 import { ResumeView } from "./views/ResumeView";
 import "./App.css";
 import "./stages.css";
+import "./study.css";
 
 const NAV_ITEMS: { id: Tab; label: string; Icon: LucideIcon }[] = [
   { id: "ask", label: "Ask", Icon: MessageSquare },
+  { id: "cards", label: "Flashcards", Icon: Layers },
+  { id: "slides", label: "Slides", Icon: Presentation },
+  { id: "quiz", label: "Quiz blitz", Icon: Zap },
   { id: "resume", label: "Resume", Icon: FileSearch },
   { id: "interview", label: "Questions", Icon: ListChecks },
   { id: "mock", label: "Mock interview", Icon: Mic },
@@ -154,6 +164,18 @@ function App() {
 
         <div hidden={tab !== "ask"}>
           <AskView />
+        </div>
+
+        <div hidden={tab !== "cards"}>
+          <FlashcardsView active={screen === "app" && tab === "cards"} />
+        </div>
+
+        <div hidden={tab !== "slides"}>
+          <SlidesView active={screen === "app" && tab === "slides"} />
+        </div>
+
+        <div hidden={tab !== "quiz"}>
+          <QuizView active={screen === "app" && tab === "quiz"} />
         </div>
 
         <div hidden={tab !== "resume"}>

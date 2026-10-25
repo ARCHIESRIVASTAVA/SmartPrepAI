@@ -26,7 +26,15 @@ const EMPTY: Progress = {
   xp: 0,
   streak: 0,
   lastDay: "",
-  clears: { ask: 0, resume: 0, interview: 0, mock: 0 },
+  clears: {
+    ask: 0,
+    cards: 0,
+    slides: 0,
+    quiz: 0,
+    resume: 0,
+    interview: 0,
+    mock: 0,
+  },
   topics: {},
   resume: "",
 };
