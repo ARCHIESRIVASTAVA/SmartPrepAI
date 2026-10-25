@@ -337,3 +337,54 @@
 @media (min-width: 1700px) {
   .workspace > div > .column { margin-inline: auto; }
 }
+
+/* ---------- phones: every tab visible, nothing hidden or overlapped ---------- */
+
+@media (max-width: 860px) {
+  /* tab bar wraps onto a second row instead of scrolling off-screen */
+  .nav {
+    flex-wrap: wrap;
+    overflow: visible;
+    gap: 6px;
+  }
+
+  .nav-item {
+    padding: 7px 10px;
+    font-size: 13px;
+    gap: 6px;
+    border: 1px solid var(--line);
+  }
+
+  .nav-item[aria-current="page"] {
+    border-color: var(--accent);
+  }
+
+  /* leave room under the content for the floating buddy */
+  .workspace { padding-bottom: 130px; }
+}
+
+/* stage map on phones scrolls as a normal page */
+@media (max-width: 760px) {
+  .stage-select {
+    height: 100dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 48px;
+  }
+
+  .stage-select .map-track { min-height: 0; }
+  .stage-select .briefing { margin-bottom: 8px; }
+}
+
+@media (max-width: 760px) {
+  .stage-select {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .stage-select > * { flex: none; }
+  .stage-select .map-track { align-self: stretch; }
+  .stage-select .briefing { align-self: stretch; width: 100%; }
+  .stage-select .map-hint { display: none; }
+}
