@@ -1,7 +1,7 @@
 import { API_URL } from "../api";
 import { friendlyError } from "./mock";
 
-export type Flashcard = { q: string; a: string };
+export type Flashcard = { q: string; a: string; topic?: string };
 export type Slide = { title: string; bullets: string[]; note?: string };
 export type QuizQuestion = {
   q: string;

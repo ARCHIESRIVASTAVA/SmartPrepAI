@@ -4,6 +4,13 @@ import { ErrorNote } from "../components/ErrorNote";
 import { Segmented } from "../components/Segmented";
 import { TopicPicker } from "../components/TopicPicker";
 import { award } from "../lib/progress";
+import {
+  describeWait,
+  dueCards,
+  recordReview,
+  saveMissed,
+  useReview,
+} from "../lib/review";
 import { studyRequest, type Flashcard } from "../lib/study";
 
 const COUNTS = [5, 10, 15];
@@ -11,6 +18,8 @@ const COUNTS = [5, 10, 15];
 type Props = { active: boolean };
 
 export function FlashcardsView({ active }: Props) {
+  const review = useReview();
+  const [source, setSource] = useState<"new" | "review">("new");
   const [topic, setTopic] = useState("DSA");
   const [count, setCount] = useState(10);
   const [busy, setBusy] = useState(false);
@@ -24,6 +33,11 @@ export function FlashcardsView({ active }: Props) {
   const [firstTry, setFirstTry] = useState(0);
   const [missed, setMissed] = useState<Flashcard[]>([]);
   const [requeued, setRequeued] = useState<Set<string>>(new Set());
+
+  const due = dueCards(review.cards);
+  const nextDue = review.cards.length
+    ? Math.min(...review.cards.map((c) => c.due))
+    : null;
 
   const playing = deck.length > 0;
   const done = playing && index >= queue.length;
@@ -49,7 +63,8 @@ export function FlashcardsView({ active }: Props) {
         count,
       });
 
-      deal(data.cards);
+      setSource("new");
+      deal(data.cards.map((c) => ({ ...c, topic: topic.trim() || "DSA" })));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
@@ -57,11 +72,25 @@ export function FlashcardsView({ active }: Props) {
     }
   };
 
+  const startReview = () => {
+    setError("");
+    setSource("review");
+    deal(
+      due.slice(0, 20).map((c) => ({ q: c.q, a: c.a, topic: c.topic }))
+    );
+  };
+
   const grade = (knew: boolean) => {
     if (!card || !flipped) return;
 
     const isRepeat = requeued.has(card.q);
     const next = index + 1;
+
+    // Only the first try at a card changes what is saved.
+    if (!isRepeat) {
+      if (source === "review") recordReview(card, knew);
+      else if (!knew) saveMissed([card]);
+    }
 
     if (knew) {
       if (!isRepeat) setFirstTry((n) => n + 1);
@@ -110,9 +139,37 @@ export function FlashcardsView({ active }: Props) {
 
         <p>
           Flip a card, then mark whether you knew it. Cards you miss come
-          back once at the end of the deck.
+          back once at the end, then return on later days until you know them.
         </p>
       </header>
+
+      {!playing && review.cards.length > 0 && (
+        <div className="review-box">
+          <div>
+            <strong>
+              {due.length > 0
+                ? `${due.length} ${
+                    due.length === 1 ? "card" : "cards"
+                  } due for review`
+                : "Nothing due for review"}
+            </strong>
+
+            <span>
+              {review.cards.length} saved
+              {review.mastered > 0 && ` · ${review.mastered} mastered`}
+              {due.length === 0 &&
+                nextDue !== null &&
+                ` · next ${describeWait(nextDue)}`}
+            </span>
+          </div>
+
+          {due.length > 0 && (
+            <button className="primary-button" onClick={startReview}>
+              Start review
+            </button>
+          )}
+        </div>
+      )}
 
       {!playing && (
         <>
@@ -205,14 +262,14 @@ export function FlashcardsView({ active }: Props) {
 
       {done && (
         <div className="result deck-result">
-          <h2>Deck done</h2>
+          <h2>{source === "review" ? "Review done" : "Deck done"}</h2>
 
           <p>
             You knew {firstTry} of {deck.length} on the first try.
             {missed.length > 0
               ? ` ${missed.length} ${
                   missed.length === 1 ? "card" : "cards"
-                } to revisit.`
+                } saved to come back tomorrow.`
               : " A clean sweep."}
           </p>
 

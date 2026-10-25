@@ -22,6 +22,7 @@ import {
   useProgress,
   weakestTopic,
 } from "../lib/progress";
+import { dueCards, useReview } from "../lib/review";
 import { makeShareCard } from "../lib/shareCard";
 import type { ServerState, Tab } from "../types";
 
@@ -122,6 +123,8 @@ export function StageSelect({ serverState, onLaunch, onBack }: Props) {
   const [profileOpen, setProfileOpen] = useState(false);
 
   const progress = useProgress();
+  const review = useReview();
+  const dueCount = dueCards(review.cards).length;
   const info = levelInfo(progress.xp);
   const unlocked = bossUnlocked(progress);
   const weak = weakestTopic(progress, TOPICS);
@@ -312,6 +315,13 @@ export function StageSelect({ serverState, onLaunch, onBack }: Props) {
           >
             Enter stage
           </button>
+        )}
+
+        {stage.id === "cards" && dueCount > 0 && (
+          <p className="briefing-tip">
+            {dueCount} {dueCount === 1 ? "card is" : "cards are"} due for
+            review.
+          </p>
         )}
 
         {(stage.id === "interview" || stage.id === "mock") && (

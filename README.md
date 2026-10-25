@@ -82,7 +82,7 @@ Generates placement-focused interview questions using Gemini.
 
 🃏 Flashcards, Slides and Quiz blitz
 
-Flashcards: AI-built decks on any topic. Flip, mark "knew it" or "missed it", and missed cards come back once.
+Flashcards: AI-built decks on any topic. Flip, mark "knew it" or "missed it". Missed cards come back once in the session and are saved for spaced repetition: they return after 1, 3, 7 and 14 days as you get them right, and count as mastered after that (saved in the browser).
 
 Slides: a 7-slide study deck on any topic, with keyboard navigation and a PowerPoint (.pptx) download.
 

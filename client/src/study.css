@@ -265,3 +265,28 @@
 .slide { margin-top: 22px; }
 .slide-nav { margin-top: 14px; }
 .flash { margin-bottom: 18px; }
+
+.review-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  max-width: 560px;
+  padding: 14px 18px;
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  background: var(--surface);
+  margin-bottom: 8px;
+}
+
+.review-box div {
+  display: grid;
+  gap: 2px;
+}
+
+.review-box span {
+  font: 400 0.75rem var(--mono);
+  color: var(--text-3);
+}
