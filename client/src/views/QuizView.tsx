@@ -5,6 +5,7 @@ import { Segmented } from "../components/Segmented";
 import { TopicPicker } from "../components/TopicPicker";
 import { DIFFICULTIES } from "../constants";
 import { award } from "../lib/progress";
+import { addSeen, getSeen } from "../lib/seen";
 import { CHEERS, emit, ENCOURAGEMENTS, pick } from "../lib/rewards";
 import { studyRequest, type QuizQuestion } from "../lib/study";
 
@@ -56,7 +57,10 @@ export function QuizView({ active }: Props) {
         topic: topic.trim() || "DSA",
         difficulty,
         count: 10,
+        exclude: getSeen(topic),
       });
+
+      addSeen(topic, data.questions.map((q) => q.q));
 
       setQuestions(data.questions);
       setIndex(0);

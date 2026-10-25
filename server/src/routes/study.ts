@@ -25,6 +25,46 @@ const ai = new GoogleGenAI({ apiKey });
 const MODEL = "gemini-3.6-flash";
 
 /**
+ * Identical prompts make the model return near-identical content, so
+ * every request gets a random angle, a higher temperature, and a list
+ * of questions this player has already seen.
+ */
+const ANGLES = [
+  "core definitions and fundamentals",
+  "tricky edge cases and common mistakes",
+  "real-world scenarios and practical use",
+  "comparisons between similar concepts",
+  "how it works internally, step by step",
+  "questions interviewers use to catch weak answers",
+  "performance, complexity and trade-offs",
+  "small examples and what-would-happen questions",
+];
+
+const pickAngle = () => ANGLES[Math.floor(Math.random() * ANGLES.length)];
+
+/** Past questions from the client, trimmed to a safe size. */
+function cleanExclude(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.replace(/[\u0000-\u001f]+/g, " ").trim().slice(0, 160))
+    .filter(Boolean)
+    .slice(-30);
+}
+
+const variety = (exclude: string[]) => `
+Focus this time on: ${pickAngle()}.
+Make this set different from any other you might write for the same topic.
+${
+  exclude.length
+    ? `Do not repeat or closely rephrase any of these questions the student has already seen:\n${exclude
+        .map((q) => `- ${q}`)
+        .join("\n")}\n`
+    : ""
+}`;
+
+/**
  * Asks Gemini for JSON and validates it. Tries twice because the
  * model occasionally returns malformed JSON.
  */
@@ -37,7 +77,7 @@ async function generate<T>(
     const response = await ai.models.generateContent({
       model: MODEL,
       contents: prompt,
-      config: { responseMimeType: "application/json" },
+      config: { responseMimeType: "application/json", temperature: 1.2 },
     });
 
     const items = validate(parseJson(response.text));
@@ -73,6 +113,7 @@ Create ${count} flashcards. Each has a short question on the front and a
 clear, correct answer on the back (1 to 3 sentences, include a tiny example
 if it helps). Cover the most commonly asked ideas, from basic to harder.
 
+${variety(cleanExclude(req.body?.exclude))}
 Return ONLY JSON in this shape:
 [{"q": "question", "a": "answer"}]
 `;
@@ -112,6 +153,7 @@ Rules:
 - Be technically correct and specific.
 - "note" is one optional sentence of speaker advice, such as a mnemonic or a common mistake.
 
+${variety([])}
 Return ONLY JSON in this shape:
 [{"title": "string", "bullets": ["string"], "note": "string"}]
 `;
@@ -154,6 +196,7 @@ Make wrong options plausible. Vary which position is correct.
 "answer" is the 0-based index of the correct option.
 "explanation" is one or two sentences on why it is correct.
 
+${variety(cleanExclude(req.body?.exclude))}
 Return ONLY JSON in this shape:
 [{"q": "string", "options": ["a","b","c","d"], "answer": 0, "explanation": "string"}]
 `;

@@ -4,6 +4,7 @@ import { ErrorNote } from "../components/ErrorNote";
 import { Segmented } from "../components/Segmented";
 import { TopicPicker } from "../components/TopicPicker";
 import { award } from "../lib/progress";
+import { addSeen, getSeen } from "../lib/seen";
 import { emit, ENCOURAGEMENTS, pick } from "../lib/rewards";
 import {
   describeWait,
@@ -69,7 +70,10 @@ export function FlashcardsView({ active }: Props) {
       const data = await studyRequest<{ cards: Flashcard[] }>("flashcards", {
         topic: topic.trim() || "DSA",
         count,
+        exclude: getSeen(topic),
       });
+
+      addSeen(topic, data.cards.map((c) => c.q));
 
       setSource("new");
       deal(data.cards.map((c) => ({ ...c, topic: topic.trim() || "DSA" })));
