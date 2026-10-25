@@ -22,6 +22,8 @@ export type Progress = {
   /** XP earned on `dayXpDate`, for the daily goal */
   dayXp: number;
   dayXpDate: string;
+  /** recent days (YYYY-M-D) on which something was completed */
+  days: string[];
 };
 
 export const DAILY_GOAL = 30;
@@ -45,6 +47,7 @@ const EMPTY: Progress = {
   resume: "",
   dayXp: 0,
   dayXpDate: "",
+  days: [],
 };
 
 const dayKey = (date = new Date()) =>
@@ -170,6 +173,9 @@ export function award(
     ...withStreak(state),
     dayXp: dayAfter,
     dayXpDate: today,
+    days: state.days.includes(today)
+      ? state.days
+      : [...state.days, today].slice(-60),
     xp: state.xp + xp,
     clears: { ...state.clears, [stage]: state.clears[stage] + 1 },
     topics,
@@ -220,4 +226,25 @@ export function weakestTopic(
 /** XP earned today (resets at midnight). */
 export function todayXp(progress: Progress): number {
   return progress.dayXpDate === dayKey() ? progress.dayXp : 0;
+}
+
+/** The last `count` days, oldest first, with whether each had activity. */
+export function lastDays(progress: Progress, count = 7) {
+  const out: { key: string; label: string; active: boolean; today: boolean }[] =
+    [];
+
+  for (let i = count - 1; i >= 0; i -= 1) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    const key = dayKey(date);
+
+    out.push({
+      key,
+      label: date.toLocaleDateString("en-US", { weekday: "narrow" }),
+      active: progress.days.includes(key),
+      today: i === 0,
+    });
+  }
+
+  return out;
 }

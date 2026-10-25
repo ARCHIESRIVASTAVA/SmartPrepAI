@@ -30,6 +30,10 @@ Answer by voice and have questions read aloud (browser speech, best in Chrome an
 
 Download a share card with your level and topic scores.
 
+A living background (glow that follows the cursor, floating code symbols) and a "Today" side panel with your week, level, daily goal, topic scores and a suggested next step.
+
+Flashcards you can drag: tilt toward the pointer, swipe right for "knew it" and left for "missed".
+
 Pip, a study buddy in the sidebar, reacts as you work: it greets you, nudges your streak, cheers correct answers and encourages you after misses.
 
 XP pop-ups, level-up and daily-goal celebrations (with confetti), and a daily goal ring.

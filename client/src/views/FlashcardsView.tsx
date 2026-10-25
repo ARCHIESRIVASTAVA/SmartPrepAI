@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LoaderCircle } from "lucide-react";
 import { ErrorNote } from "../components/ErrorNote";
 import { Segmented } from "../components/Segmented";
@@ -39,6 +39,13 @@ export function FlashcardsView({ active }: Props) {
   const nextDue = review.cards.length
     ? Math.min(...review.cards.map((c) => c.due))
     : null;
+
+  // Drag-to-grade and pointer tilt for the card.
+  const [dragX, setDragX] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const startX = useRef<number | null>(null);
+  const moved = useRef(false);
+  const SWIPE = 110;
 
   const playing = deck.length > 0;
   const done = playing && index >= queue.length;
@@ -221,24 +228,107 @@ export function FlashcardsView({ active }: Props) {
             {queue.length > deck.length && " (includes retries)"}
           </p>
 
-          <button
-            type="button"
-            className={`flash${flipped ? " is-flipped" : ""}`}
-            onClick={() => setFlipped((f) => !f)}
-            aria-label={flipped ? "Answer shown. Flip back" : "Flip to see the answer"}
-          >
-            <span className="flash-inner">
-              <span className="flash-face flash-front">
-                <small>Question</small>
-                {card.q}
-              </span>
+          <div
+            className={`flash-stage${
+              queue.length - index > 1 ? " has-more" : ""
+            }${dragX > 30 ? " dir-right" : dragX < -30 ? " dir-left" : ""}${
+              dragging ? " is-dragging" : ""
+            }`}
+            style={
+              {
+                "--dx": `${dragX}px`,
+                "--p": Math.min(1, Math.abs(dragX) / SWIPE),
+              } as React.CSSProperties
+            }
+            onPointerDown={(e) => {
+              startX.current = e.clientX;
+              moved.current = false;
+              setDragging(true);
+              e.currentTarget.setPointerCapture(e.pointerId);
+            }}
+            onPointerMove={(e) => {
+              const el = e.currentTarget;
 
-              <span className="flash-face flash-back">
-                <small>Answer</small>
-                {card.a}
-              </span>
+              if (startX.current !== null) {
+                const dx = e.clientX - startX.current;
+                if (Math.abs(dx) > 8) moved.current = true;
+                if (moved.current) setDragX(dx);
+                return;
+              }
+
+              // Hover: tilt toward the pointer and move the glare.
+              const box = el.getBoundingClientRect();
+              const px = (e.clientX - box.left) / box.width;
+              const py = (e.clientY - box.top) / box.height;
+              el.style.setProperty("--ry", `${(px - 0.5) * 10}deg`);
+              el.style.setProperty("--rx", `${(0.5 - py) * 8}deg`);
+              el.style.setProperty("--gx", `${px * 100}%`);
+              el.style.setProperty("--gy", `${py * 100}%`);
+            }}
+            onPointerUp={(e) => {
+              const dx = startX.current === null ? 0 : e.clientX - startX.current;
+              startX.current = null;
+              setDragging(false);
+              setDragX(0);
+
+              // A tap (no drag) flips the card. Pointer capture means the
+              // button never sees the click, so it is handled here.
+              if (!moved.current) {
+                setFlipped((f) => !f);
+                return;
+              }
+
+              if (Math.abs(dx) < SWIPE) return;
+
+              if (flipped) grade(dx > 0);
+              else setFlipped(true);
+            }}
+            onPointerLeave={(e) => {
+              e.currentTarget.style.setProperty("--ry", "0deg");
+              e.currentTarget.style.setProperty("--rx", "0deg");
+            }}
+            onPointerCancel={() => {
+              startX.current = null;
+              setDragging(false);
+              setDragX(0);
+            }}
+          >
+            <span className="swipe-tag swipe-left" aria-hidden="true">
+              Missed
             </span>
-          </button>
+            <span className="swipe-tag swipe-right" aria-hidden="true">
+              Knew it
+            </span>
+
+            <div className="flash-tilt">
+              <button
+                type="button"
+                className={`flash${flipped ? " is-flipped" : ""}`}
+                onClick={(e) => {
+                  // Mouse and touch taps flip on pointer-up; this covers
+                  // keyboard activation (Enter or Space on the focused card).
+                  if (e.detail === 0) setFlipped((f) => !f);
+                }}
+                aria-label={
+                  flipped ? "Answer shown. Flip back" : "Flip to see the answer"
+                }
+              >
+                <span className="flash-inner">
+                  <span className="flash-face flash-front">
+                    <small>Question</small>
+                    {card.q}
+                  </span>
+
+                  <span className="flash-face flash-back">
+                    <small>Answer</small>
+                    {card.a}
+                  </span>
+                </span>
+
+                <span className="flash-glare" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
 
           <div className="actions actions-row">
             <button
@@ -260,7 +350,7 @@ export function FlashcardsView({ active }: Props) {
             </button>
 
             <span className="hint">
-              Space flips · ← missed · → knew it
+              Space flips · ← missed · → knew it · or drag the card
             </span>
           </div>
         </>

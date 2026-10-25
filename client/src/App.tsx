@@ -11,9 +11,11 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { API_URL } from "./api";
+import { AmbientBackground } from "./components/AmbientBackground";
 import { Companion } from "./components/Companion";
 import { ReminderButton } from "./components/ReminderButton";
 import { RewardLayer } from "./components/RewardLayer";
+import { TodayPanel } from "./components/TodayPanel";
 import type { Screen, ServerState, Tab } from "./types";
 import { StageSelect } from "./views/StageSelect";
 import { TitleScreen } from "./views/TitleScreen";
@@ -111,6 +113,8 @@ function App() {
       )}
 
     <div className="shell" hidden={screen !== "app"}>
+      <AmbientBackground />
+
       <aside className="rail">
         <button
           type="button"
@@ -155,6 +159,10 @@ function App() {
       </aside>
 
       <main className="workspace">
+        {tab !== "ask" && tab !== "mock" && (
+          <TodayPanel onGo={setTab} />
+        )}
+
         {serverState === "waking" && (
           <p className="notice" role="status">
             The server was idle and is starting up. The
