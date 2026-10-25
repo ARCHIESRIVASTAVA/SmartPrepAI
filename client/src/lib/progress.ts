@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import type { Tab } from "../types";
+import { emit } from "./rewards";
 
 /*
   Player progress, kept in this browser's localStorage.
@@ -18,7 +19,12 @@ export type Progress = {
   topics: Record<string, TopicStat>;
   /** latest resume analysis, used to personalise the mock interview */
   resume: string;
+  /** XP earned on `dayXpDate`, for the daily goal */
+  dayXp: number;
+  dayXpDate: string;
 };
+
+export const DAILY_GOAL = 30;
 
 const KEY = "smartprep-progress-v1";
 
@@ -37,6 +43,8 @@ const EMPTY: Progress = {
   },
   topics: {},
   resume: "",
+  dayXp: 0,
+  dayXpDate: "",
 };
 
 const dayKey = (date = new Date()) =>
@@ -152,14 +160,29 @@ export function award(
     };
   }
 
+  const before = levelInfo(state.xp).level;
+  const today = dayKey();
+  const dayBefore = state.dayXpDate === today ? state.dayXp : 0;
+  const dayAfter = dayBefore + xp;
+
   commit({
     ...state,
     ...withStreak(state),
+    dayXp: dayAfter,
+    dayXpDate: today,
     xp: state.xp + xp,
     clears: { ...state.clears, [stage]: state.clears[stage] + 1 },
     topics,
     resume: extra?.resume ?? state.resume,
   });
+
+  emit({ type: "xp", amount: xp });
+
+  const after = levelInfo(state.xp).level;
+  if (after > before) emit({ type: "level", level: after });
+  else if (dayBefore < DAILY_GOAL && dayAfter >= DAILY_GOAL) {
+    emit({ type: "goal" });
+  }
 }
 
 export function resetProgress() {
@@ -192,4 +215,9 @@ export function weakestTopic(
   }
 
   return { topic: worst, average: worstAvg };
+}
+
+/** XP earned today (resets at midnight). */
+export function todayXp(progress: Progress): number {
+  return progress.dayXpDate === dayKey() ? progress.dayXp : 0;
 }

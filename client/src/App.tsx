@@ -11,6 +11,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { API_URL } from "./api";
+import { Companion } from "./components/Companion";
+import { ReminderButton } from "./components/ReminderButton";
+import { RewardLayer } from "./components/RewardLayer";
 import type { Screen, ServerState, Tab } from "./types";
 import { StageSelect } from "./views/StageSelect";
 import { TitleScreen } from "./views/TitleScreen";
@@ -24,6 +27,7 @@ import { ResumeView } from "./views/ResumeView";
 import "./App.css";
 import "./stages.css";
 import "./study.css";
+import "./life.css";
 
 const NAV_ITEMS: { id: Tab; label: string; Icon: LucideIcon }[] = [
   { id: "ask", label: "Ask", Icon: MessageSquare },
@@ -86,6 +90,8 @@ function App() {
 
   return (
     <>
+      <RewardLayer />
+
       {screen === "title" && (
         <TitleScreen
           serverState={serverState}
@@ -133,6 +139,10 @@ function App() {
             </button>
           ))}
         </nav>
+
+        <Companion tab={tab} visible={screen === "app"} />
+
+        <ReminderButton />
 
         <div className="rail-footer" role="status">
           <span

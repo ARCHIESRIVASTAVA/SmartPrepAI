@@ -4,6 +4,7 @@ import { ErrorNote } from "../components/ErrorNote";
 import { Segmented } from "../components/Segmented";
 import { TopicPicker } from "../components/TopicPicker";
 import { award } from "../lib/progress";
+import { emit, ENCOURAGEMENTS, pick } from "../lib/rewards";
 import {
   describeWait,
   dueCards,
@@ -90,6 +91,10 @@ export function FlashcardsView({ active }: Props) {
     if (!isRepeat) {
       if (source === "review") recordReview(card, knew);
       else if (!knew) saveMissed([card]);
+
+      if (!knew) {
+        emit({ type: "say", mood: "sad", text: pick(ENCOURAGEMENTS) });
+      }
     }
 
     if (knew) {
@@ -106,6 +111,7 @@ export function FlashcardsView({ active }: Props) {
     // Last card of the final pass: give XP once.
     if (next >= (knew || isRepeat ? queue.length : queue.length + 1)) {
       const first = knew && !isRepeat ? firstTry + 1 : firstTry;
+      if (missed.length === 0 && knew) emit({ type: "confetti" });
       award("cards", 10 + first * 2);
     }
   };

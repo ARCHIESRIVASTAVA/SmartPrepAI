@@ -5,6 +5,7 @@ import { Segmented } from "../components/Segmented";
 import { TopicPicker } from "../components/TopicPicker";
 import { DIFFICULTIES } from "../constants";
 import { award } from "../lib/progress";
+import { CHEERS, emit, ENCOURAGEMENTS, pick } from "../lib/rewards";
 import { studyRequest, type QuizQuestion } from "../lib/study";
 
 const SECONDS = 20;
@@ -82,6 +83,10 @@ export function QuizView({ active }: Props) {
     setReward(xp);
     setPhase("over");
 
+    if (finalAnswered > 0 && finalCorrect / finalAnswered >= 0.7) {
+      emit({ type: "confetti" });
+    }
+
     if (finalAnswered > 0) {
       award("quiz", xp, {
         topic: topic.trim(),
@@ -109,6 +114,18 @@ export function QuizView({ active }: Props) {
     if (right) setCorrect((n) => n + 1);
     if (!right) setLives((l) => l - 1);
     setPhase("reveal");
+
+    emit({
+      type: "say",
+      mood: right ? "happy" : "sad",
+      text: right
+        ? nextStreak >= 3
+          ? `${nextStreak} in a row!`
+          : pick(CHEERS)
+        : choice === -1
+          ? "Time ran out. Go with your first instinct."
+          : pick(ENCOURAGEMENTS),
+    });
   };
 
   const next = () => {

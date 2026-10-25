@@ -30,6 +30,12 @@ Answer by voice and have questions read aloud (browser speech, best in Chrome an
 
 Download a share card with your level and topic scores.
 
+Pip, a study buddy in the sidebar, reacts as you work: it greets you, nudges your streak, cheers correct answers and encourages you after misses.
+
+XP pop-ups, level-up and daily-goal celebrations (with confetti), and a daily goal ring.
+
+A downloadable daily calendar reminder (.ics) so your streak survives even when the tab is closed.
+
 Progress is stored in the browser (localStorage), not on the server.
 
 🤖 AI Placement Assistant

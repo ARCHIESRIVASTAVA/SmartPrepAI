@@ -1,0 +1,185 @@
+/* ===== life: companion, rewards, motion ===== */
+
+/* ---------- Pip ---------- */
+
+.pip { overflow: visible; }
+.pip-shadow { fill: rgba(0, 0, 0, 0.35); }
+.pip-face { fill: var(--accent); }
+.pip-tuft { stroke: var(--accent); stroke-width: 3; stroke-linecap: round; }
+.pip-cheek { fill: rgba(255, 138, 138, 0.55); }
+.pip-eye { fill: var(--accent-ink); transform-box: fill-box; transform-origin: center; animation: blink 5s infinite; }
+.pip-mouth { stroke: var(--accent-ink); stroke-width: 2.6; stroke-linecap: round; fill: none; }
+.pip-mouth-open { fill: var(--accent-ink); stroke: none; }
+
+.pip-body { transform-box: fill-box; transform-origin: 50% 100%; animation: pip-idle 3.2s ease-in-out infinite; }
+.pip-happy .pip-body { animation: pip-hop 0.55s ease-in-out 2; }
+.pip-cheer .pip-body { animation: pip-hop 0.45s ease-in-out infinite; }
+.pip-sad .pip-body { animation: pip-sag 0.5s ease-out both; }
+.pip-sad .pip-eye { ry: 3; }
+
+@keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+@keyframes pip-idle { 50% { transform: translateY(-2px) scale(1.02, 0.98); } }
+@keyframes pip-hop { 50% { transform: translateY(-9px) scale(0.97, 1.05); } }
+@keyframes pip-sag { to { transform: translateY(2px) scale(1.04, 0.94); } }
+
+/* ---------- companion in the rail ---------- */
+
+.companion { display: grid; gap: 8px; margin-top: auto; padding: 0 6px; }
+.rail .companion + .reminder { margin-top: 0; }
+.companion-top { display: flex; align-items: center; gap: 10px; }
+.companion-stats { display: grid; gap: 4px; min-width: 0; }
+.companion-level { font: 600 0.8rem var(--mono); color: var(--accent); }
+
+.goal-ring-wrap { display: flex; align-items: center; gap: 6px; font: 400 0.7rem var(--mono); color: var(--text-3); }
+.goal-ring-wrap svg { transform: rotate(-90deg); flex: none; width: 22px; height: 22px; }
+.goal-track { fill: none; stroke: var(--line-strong); stroke-width: 4; }
+.goal-fill { fill: none; stroke: var(--accent); stroke-width: 4; stroke-linecap: round; transition: stroke-dashoffset 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+.bubble {
+  position: relative;
+  margin: 0;
+  padding: 0 11px;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--raised);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-2);
+  transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+}
+
+.bubble.is-open { max-height: 120px; opacity: 1; padding: 8px 11px; border-color: var(--line-strong); }
+
+.rail-footer { margin-top: 0; }
+
+/* ---------- reminder ---------- */
+
+.reminder { position: relative; padding: 0 6px; }
+
+.reminder-toggle {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 8px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--text-3);
+  font-size: 12.5px; cursor: pointer;
+}
+.reminder-toggle:hover { color: var(--accent); background: var(--raised); }
+
+.reminder-pop {
+  position: absolute; left: 6px; bottom: calc(100% + 6px); z-index: 30;
+  width: 230px; display: grid; gap: 10px; padding: 14px;
+  border: 1px solid var(--line-strong); border-radius: 10px;
+  background: var(--surface); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  animation: pop-in 0.18s ease both;
+}
+.reminder-pop p { margin: 0; font-size: 12.5px; color: var(--text-2); }
+.reminder-pop label { display: grid; gap: 4px; font-size: 12px; color: var(--text-3); }
+.reminder-pop input { height: 34px; padding: 0 8px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--ink); }
+.reminder-pop small { font-size: 11px; color: var(--text-3); }
+
+@keyframes pop-in { from { opacity: 0; translate: 0 6px; scale: 0.97; } }
+
+/* ---------- title screen Pip ---------- */
+
+.title-pip { margin-bottom: 8px; animation: rise 0.9s 1.1s both; }
+
+/* ---------- rewards ---------- */
+
+.reward-layer { position: fixed; inset: 0; z-index: 100; pointer-events: none; overflow: hidden; }
+
+.toast {
+  position: absolute; right: 28px; bottom: 28px;
+  padding: 8px 16px; border-radius: 999px;
+  background: var(--accent); color: var(--accent-ink);
+  font: 700 0.9rem var(--mono);
+  box-shadow: 0 8px 30px rgba(245, 196, 81, 0.35);
+  animation: toast-up 1.8s ease both;
+}
+
+.toast-big {
+  right: auto; left: 50%; bottom: auto; top: 22%;
+  translate: -50% 0;
+  padding: 14px 30px; font-size: 1.4rem;
+  animation: toast-big 3s ease both;
+}
+
+@keyframes toast-up {
+  0% { opacity: 0; translate: 0 16px; scale: 0.9; }
+  15% { opacity: 1; translate: 0 0; scale: 1.06; }
+  25% { scale: 1; }
+  80% { opacity: 1; translate: 0 -8px; }
+  100% { opacity: 0; translate: 0 -24px; }
+}
+
+@keyframes toast-big {
+  0% { opacity: 0; scale: 0.5; }
+  12% { opacity: 1; scale: 1.15; }
+  22% { scale: 1; }
+  85% { opacity: 1; }
+  100% { opacity: 0; translate: -50% -20px; }
+}
+
+.confetti {
+  position: absolute; top: -12px;
+  width: 9px; height: 14px; border-radius: 2px;
+  animation: confetti-fall 2.2s cubic-bezier(0.25, 0.6, 0.4, 1) both;
+}
+
+@keyframes confetti-fall {
+  0% { translate: 0 0; rotate: 0deg; opacity: 1; }
+  100% { translate: var(--dx) 105vh; rotate: var(--dr); opacity: 0.9; }
+}
+
+/* ---------- motion across the tools ---------- */
+
+.workspace > div:not([hidden]) { animation: view-in 0.35s ease both; }
+
+@keyframes view-in { from { opacity: 0; translate: 0 10px; } }
+
+.nav-item { transition: background 0.15s, color 0.15s, transform 0.15s; }
+.nav-item:hover { transform: translateX(3px); }
+.nav-item[aria-current="page"] svg { color: var(--accent); }
+
+.primary-button { transition: transform 0.12s, box-shadow 0.2s, filter 0.15s; }
+.primary-button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(245, 196, 81, 0.28); }
+.primary-button:active:not(:disabled) { transform: translateY(0) scale(0.97); }
+
+.source { transition: transform 0.15s, border-color 0.15s; }
+.source:hover { transform: translateX(3px); }
+
+.result, .question, .slide, .deck-result { animation: rise 0.45s ease both; }
+
+.flash { transition: transform 0.2s; }
+.flash:hover { transform: translateY(-3px) rotate(-0.4deg); }
+
+.choice.right { animation: pop 0.4s ease both; }
+.choice.wrong { animation: shake 0.4s ease both; }
+
+@keyframes pop { 40% { transform: scale(1.025); } }
+@keyframes shake {
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.timer span.low { animation: pulse-bar 0.5s ease-in-out infinite; }
+@keyframes pulse-bar { 50% { opacity: 0.55; } }
+
+.streak-badge { animation: pop 0.4s ease both; }
+
+/* ---------- small screens ---------- */
+
+@media (max-width: 860px) {
+  .companion {
+    position: fixed; left: 12px; bottom: 12px; z-index: 40;
+    margin: 0; padding: 0; max-width: calc(100vw - 24px);
+    display: flex; align-items: flex-end; gap: 8px;
+    pointer-events: none;
+  }
+  .companion-stats { display: none; }
+  .companion-top { flex: none; }
+  .bubble { max-width: 230px; pointer-events: auto; }
+  .reminder { padding: 0; }
+  .reminder-pop { bottom: auto; top: calc(100% + 6px); }
+}

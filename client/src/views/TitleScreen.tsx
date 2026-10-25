@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Pip } from "../components/Pip";
 import type { ServerState } from "../types";
 
 const STATUS_TEXT: Record<ServerState, string> = {
@@ -41,6 +42,10 @@ export function TitleScreen({ serverState, onStart }: Props) {
       <div className="bar bar-bottom" aria-hidden="true" />
 
       <div className="title-center">
+        <div className="title-pip">
+          <Pip mood="happy" size={84} />
+        </div>
+
         <p className="title-kicker">Placement prep, level by level</p>
 
         <h1 className="title-logo">
@@ -72,7 +77,7 @@ export function TitleScreen({ serverState, onStart }: Props) {
         </button>
       </div>
 
-      <p className="title-foot">4 stages · 1 boss fight</p>
+      <p className="title-foot">7 stages · 1 boss fight</p>
     </section>
   );
 }
