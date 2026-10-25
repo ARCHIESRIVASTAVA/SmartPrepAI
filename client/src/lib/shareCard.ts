@@ -77,7 +77,7 @@ export async function makeShareCard(progress: Progress): Promise<Blob | null> {
 
   g.fillStyle = "#7f8ba5";
   g.font = `500 22px ${mono}`;
-  g.fillText("smart-prep-ai-gamma.vercel.app", 70, 580);
+  g.fillText(window.location.host, 70, 580);
 
   return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
 }
