@@ -7,7 +7,7 @@
 .pip-face { fill: var(--accent); }
 .pip-tuft { stroke: var(--accent); stroke-width: 3; stroke-linecap: round; }
 .pip-cheek { fill: rgba(255, 138, 138, 0.55); }
-.pip-eye { fill: var(--accent-ink); transform-box: fill-box; transform-origin: center; animation: blink 5s infinite; }
+.pip-eye { fill: var(--accent-ink); transform-box: fill-box; transform-origin: center; animation: pip-blink 5s infinite; }
 .pip-mouth { stroke: var(--accent-ink); stroke-width: 2.6; stroke-linecap: round; fill: none; }
 .pip-mouth-open { fill: var(--accent-ink); stroke: none; }
 
@@ -17,7 +17,7 @@
 .pip-sad .pip-body { animation: pip-sag 0.5s ease-out both; }
 .pip-sad .pip-eye { ry: 3; }
 
-@keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+@keyframes pip-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
 @keyframes pip-idle { 50% { transform: translateY(-2px) scale(1.02, 0.98); } }
 @keyframes pip-hop { 50% { transform: translateY(-9px) scale(0.97, 1.05); } }
 @keyframes pip-sag { to { transform: translateY(2px) scale(1.04, 0.94); } }

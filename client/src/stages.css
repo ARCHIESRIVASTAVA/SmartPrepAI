@@ -25,19 +25,28 @@
 .fx-grid {
   position: absolute;
   inset: -50% -20% -10%;
-  background-image:
-    linear-gradient(var(--line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--line) 1px, transparent 1px);
-  background-size: 56px 56px;
   transform: perspective(700px) rotateX(62deg);
   transform-origin: 50% 100%;
   opacity: 0.35;
   mask-image: linear-gradient(to top, #000 10%, transparent 75%);
+  overflow: hidden;
+}
+
+/* The grid lines live on a child that slides by exactly one cell, so the
+   loop is seamless and runs on the GPU instead of repainting. */
+.fx-grid::before {
+  content: "";
+  position: absolute;
+  inset: -56px 0 0;
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 56px 56px;
   animation: grid-drift 6s linear infinite;
 }
 
 @keyframes grid-drift {
-  to { background-position: 0 56px, 56px 0; }
+  to { transform: translateY(56px); }
 }
 
 .fx-glow {
@@ -64,6 +73,7 @@
   position: absolute;
   left: 0;
   right: 0;
+  top: -140px;
   height: 140px;
   background: linear-gradient(
     to bottom,
@@ -76,8 +86,7 @@
 }
 
 @keyframes scan {
-  from { top: -140px; }
-  to { top: 100%; }
+  to { transform: translateY(calc(100vh + 140px)); }
 }
 
 /* ---------- title ---------- */
@@ -131,8 +140,7 @@
 @keyframes track-in {
   from {
     opacity: 0;
-    letter-spacing: 0.35em;
-    filter: blur(14px);
+    scale: 1.12;
   }
 }
 
@@ -190,9 +198,19 @@
   letter-spacing: 0.18em;
   text-transform: uppercase;
   cursor: pointer;
-  animation:
-    rise 0.8s 1.6s both,
-    blink 1.6s 2.4s ease-in-out infinite;
+  position: relative;
+  animation: rise 0.8s 1.6s both;
+}
+
+.press-start::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow: 0 0 22px rgba(245, 196, 81, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  animation: press-glow 1.6s 2.4s ease-in-out infinite;
 }
 
 .press-start:hover {
@@ -200,8 +218,8 @@
   color: var(--accent-ink);
 }
 
-@keyframes blink {
-  50% { box-shadow: 0 0 22px rgba(245, 196, 81, 0.5); }
+@keyframes press-glow {
+  50% { opacity: 1; }
 }
 
 .title-foot {
@@ -328,6 +346,7 @@
 .node:nth-child(8) { animation-delay: 0.7s; }
 
 .node-orb {
+  position: relative;
   width: 56px;
   height: 56px;
   border-radius: 50%;
@@ -335,7 +354,12 @@
   place-items: center;
   background: var(--surface);
   border: 2px solid var(--line-strong);
-  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition:
+    width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+    height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.3s,
+    background-color 0.3s,
+    color 0.3s;
 }
 
 .node.is-boss .node-orb {
@@ -377,15 +401,23 @@
   box-shadow:
     0 0 0 6px rgba(245, 196, 81, 0.12),
     0 0 36px rgba(245, 196, 81, 0.4);
+}
+
+.node.is-selected .node-orb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow:
+    0 0 0 12px rgba(245, 196, 81, 0.05),
+    0 0 48px rgba(245, 196, 81, 0.55);
+  opacity: 0;
+  pointer-events: none;
   animation: pulse-ring 1.8s ease-in-out infinite;
 }
 
 @keyframes pulse-ring {
-  50% {
-    box-shadow:
-      0 0 0 12px rgba(245, 196, 81, 0.05),
-      0 0 48px rgba(245, 196, 81, 0.55);
-  }
+  50% { opacity: 1; }
 }
 
 .briefing {
@@ -703,4 +735,15 @@ button.brand:hover .brand-name { color: var(--accent); }
   .stage-select .map-head { position: relative; top: auto; left: auto; right: auto; }
   .stage-select .map-track { grid-row: auto; margin-bottom: 0; align-self: center; }
   .stage-select .briefing { grid-row: auto; }
+}
+
+/* Phones: keep the look, drop effects that cost frames. */
+@media (max-width: 760px), (pointer: coarse) {
+  .fx-scan { display: none; }
+  .fx-grid::before { animation-duration: 9s; }
+  .title-logo-accent { text-shadow: 0 0 20px rgba(245, 196, 81, 0.35); }
+  .load-bar span { box-shadow: none; }
+  .map-path-fill { box-shadow: none; }
+  .node.is-selected .node-orb { box-shadow: 0 0 0 6px rgba(245, 196, 81, 0.12); }
+  .node.is-selected .node-orb::after { box-shadow: 0 0 0 10px rgba(245, 196, 81, 0.06); }
 }
