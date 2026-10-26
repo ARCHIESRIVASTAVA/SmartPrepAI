@@ -8,10 +8,14 @@ import interviewRouter from "./routes/interview";
 import mockInterviewRouter from "./routes/mockInterview";
 import studyRouter from "./routes/study";
 import tutorRouter from "./routes/tutor";
+import { aiLimiter } from "./lib/gemini";
 
 dotenv.config();
 
 const app = express();
+
+// Render sits behind a proxy; trust it so req.ip is the real visitor.
+app.set("trust proxy", 1);
 
 // Middleware
 app.use(cors());
@@ -24,6 +28,11 @@ app.get("/", (req, res) => {
     message: "🚀 SmartPrep AI Backend Running",
   });
 });
+
+// Every route below calls Gemini, so each visitor gets a fair share.
+for (const path of ["/chat", "/resume", "/interview", "/mock-interview", "/study", "/tutor"]) {
+  app.use(path, aiLimiter);
+}
 
 // AI Chat
 app.use("/chat", chatRouter);

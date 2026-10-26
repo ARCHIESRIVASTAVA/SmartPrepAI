@@ -3,6 +3,7 @@ import multer from "multer";
 import dotenv from "dotenv";
 import { PDFParse } from "pdf-parse";
 import { GoogleGenAI } from "@google/genai";
+import { guard, sendAiError } from "../lib/gemini";
 
 dotenv.config();
 
@@ -78,10 +79,9 @@ RESUME:
 ${resumeText}
 `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: prompt,
-    });
+    const response = await guard((model) =>
+      ai.models.generateContent({ model, contents: prompt })
+    );
 
     console.log("✅ Gemini resume analysis completed");
 
@@ -91,12 +91,7 @@ ${resumeText}
       analysis: response.text,
     });
   } catch (error: any) {
-    console.error("❌ RESUME ERROR:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: error?.message || "Resume analysis failed",
-    });
+    return sendAiError(res, error, "Resume analysis failed");
   }
 });
 

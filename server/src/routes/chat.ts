@@ -5,6 +5,7 @@ import {
   retrieveRelevantChunks,
   type RetrievedChunk,
 } from "../rag/retrieve";
+import { guard, isQuotaError, QUOTA_MESSAGE } from "../lib/gemini";
 
 dotenv.config();
 
@@ -30,7 +31,6 @@ interface WebSource {
   url: string;
 }
 
-const MODEL = "gemini-3.6-flash";
 
 const STOP_WORDS = new Set(
   "a an the is are was were be of to in on for and or with what how why does do explain about vs between difference".split(
@@ -71,6 +71,22 @@ function makeExcerpt(text: string, question: string): string {
   }
 
   return best.length > 320 ? `${best.slice(0, 317)}...` : best;
+}
+
+/**
+ * Searches the study material, but never fails the whole request:
+ * if the embedding service is rate limited we fall back to web search.
+ */
+async function safeRetrieve(
+  query: string,
+  topK?: number
+): Promise<RetrievedChunk[]> {
+  try {
+    return await retrieveRelevantChunks(query, topK);
+  } catch (error: any) {
+    console.error("⚠️ Retrieval failed, using web search:", error?.message);
+    return [];
+  }
 }
 
 function buildContext(chunks: RetrievedChunk[]): string {
@@ -204,7 +220,7 @@ router.post("/", async (req, res) => {
     // 2. Retrieve relevant chunks from Pinecone.
     console.log("🔎 Searching Pinecone...");
 
-    const retrievedChunks = await retrieveRelevantChunks(
+    const retrievedChunks = await safeRetrieve(
       question,
       5
     );
@@ -259,10 +275,9 @@ ${chunk.text}
 
       const prompt = buildStudyPrompt(context, question);
 
-      const interaction = await ai.interactions.create({
-        model: "gemini-3.6-flash",
-        input: prompt,
-      });
+      const interaction = await guard((model) =>
+        ai.interactions.create({ model, input: prompt })
+      );
 
       reply = interaction.output_text || "";
       sourceType = "study_material";
@@ -286,11 +301,13 @@ ${chunk.text}
 
       const webPrompt = buildWebPrompt(question);
 
-      const interaction = await ai.interactions.create({
-        model: "gemini-3.6-flash",
-        input: webPrompt,
-        tools: [{ type: "google_search" }],
-      });
+      const interaction = await guard((model) =>
+        ai.interactions.create({
+          model,
+          input: webPrompt,
+          tools: [{ type: "google_search" }],
+        })
+      );
 
       reply = interaction.output_text || "";
       sourceType = "web";
@@ -403,12 +420,12 @@ ${chunk.text}
     });
 
     // Handle quota and rate-limit errors separately.
-    if (status === 429) {
+    if (isQuotaError(error)) {
       return res.status(429).json({
         success: false,
         error: "QUOTA_EXCEEDED",
         message:
-          "The AI service quota or rate limit has been reached. Please try again later.",
+          QUOTA_MESSAGE,
       });
     }
 
@@ -471,7 +488,7 @@ router.post("/stream", async (req, res) => {
   try {
     console.log("🔥 NEW SMARTPREP STREAM REQUEST:", question);
 
-    const retrievedChunks = await retrieveRelevantChunks(question, 5);
+    const retrievedChunks = await safeRetrieve(question, 5);
 
     const bestScore = retrievedChunks.reduce(
       (highest, chunk) => Math.max(highest, chunk.score),
@@ -500,18 +517,20 @@ router.post("/stream", async (req, res) => {
         : [],
     });
 
-    const stream = useStudyMaterial
-      ? await ai.interactions.create({
-          model: MODEL,
-          input: buildStudyPrompt(buildContext(retrievedChunks), question),
-          stream: true,
-        })
-      : await ai.interactions.create({
-          model: MODEL,
-          input: buildWebPrompt(question),
-          tools: [{ type: "google_search" }],
-          stream: true,
-        });
+    const stream = await guard((model) =>
+      useStudyMaterial
+        ? ai.interactions.create({
+            model,
+            input: buildStudyPrompt(buildContext(retrievedChunks), question),
+            stream: true,
+          })
+        : ai.interactions.create({
+            model,
+            input: buildWebPrompt(question),
+            tools: [{ type: "google_search" }],
+            stream: true,
+          })
+    );
 
     let fullText = "";
     const webSources: WebSource[] = [];
@@ -565,11 +584,11 @@ router.post("/stream", async (req, res) => {
       code: error?.code,
     });
 
-    if (status === 429) {
+    if (isQuotaError(error)) {
       send("error", {
         error: "QUOTA_EXCEEDED",
         message:
-          "The AI service quota or rate limit has been reached. Please try again later.",
+          QUOTA_MESSAGE,
       });
     } else {
       send("error", {

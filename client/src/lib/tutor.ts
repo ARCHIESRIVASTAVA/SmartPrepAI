@@ -21,6 +21,14 @@ export async function streamTutor(
     signal,
   });
 
+  if (response.status === 429) {
+    const body = await response.json().catch(() => ({}));
+    handlers.onError(
+      body.message || "Pip is getting a lot of questions. Try again in a minute."
+    );
+    return;
+  }
+
   if (!response.ok || !response.body) {
     throw new Error(`Chat failed (${response.status})`);
   }

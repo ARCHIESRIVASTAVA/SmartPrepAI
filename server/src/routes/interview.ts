@@ -1,6 +1,7 @@
 import { Router } from "express";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
+import { guard, sendAiError } from "../lib/gemini";
 
 dotenv.config();
 
@@ -60,10 +61,9 @@ Return only the questions.
 
     console.log("🤖 Calling Gemini Interactions API...");
 
-    const interaction = await ai.interactions.create({
-      model: "gemini-3.6-flash",
-      input: prompt,
-    });
+    const interaction = await guard((model) =>
+      ai.interactions.create({ model, input: prompt })
+    );
 
     const questions = interaction.output_text;
 
@@ -78,13 +78,7 @@ Return only the questions.
     });
 
   } catch (error: any) {
-    console.error("❌ INTERVIEW ERROR:", error);
-
-    return res.status(500).json({
-      success: false,
-      message:
-        error?.message || "Failed to generate interview questions",
-    });
+    return sendAiError(res, error, "Failed to generate interview questions");
   }
 });
 

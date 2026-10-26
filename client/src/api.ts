@@ -42,6 +42,16 @@ export async function streamChat(
     body: JSON.stringify({ message }),
   });
 
+  // Rate limited: show the server's message instead of retrying with
+  // POST /chat, which would only use up more of the shared quota.
+  if (response.status === 429) {
+    const body = await response.json().catch(() => ({}));
+    handlers.onError(
+      body.message || "The AI is very busy. Please try again in a minute."
+    );
+    return;
+  }
+
   if (!response.ok || !response.body) {
     throw new Error(`Stream failed (${response.status})`);
   }

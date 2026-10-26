@@ -1,6 +1,7 @@
 import { Router } from "express";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
+import { guard, sendAiError } from "../lib/gemini";
 import {
   clampCount,
   cleanTopic,
@@ -22,7 +23,6 @@ if (!apiKey) {
 
 const ai = new GoogleGenAI({ apiKey });
 
-const MODEL = "gemini-3.6-flash";
 
 /**
  * Identical prompts make the model return near-identical content, so
@@ -74,11 +74,13 @@ async function generate<T>(
   minimum: number
 ): Promise<T[]> {
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    const response = await ai.models.generateContent({
-      model: MODEL,
-      contents: prompt,
-      config: { responseMimeType: "application/json", temperature: 1.2 },
-    });
+    const response = await guard((model) =>
+      ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: { responseMimeType: "application/json", temperature: 1.2 },
+      })
+    );
 
     const items = validate(parseJson(response.text));
 
@@ -89,12 +91,7 @@ async function generate<T>(
 }
 
 function fail(res: any, error: any, fallback: string) {
-  console.error("❌ STUDY ERROR:", error);
-
-  return res.status(500).json({
-    success: false,
-    message: error?.message || fallback,
-  });
+  return sendAiError(res, error, fallback);
 }
 
 /* FLASHCARDS */

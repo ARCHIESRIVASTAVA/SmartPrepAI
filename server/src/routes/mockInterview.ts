@@ -1,6 +1,7 @@
 import { Router } from "express";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
+import { guard, sendAiError } from "../lib/gemini";
 
 dotenv.config();
 
@@ -107,10 +108,9 @@ Rules:
 
     console.log("🎤 Starting mock interview...");
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: prompt,
-    });
+    const response = await guard((model) =>
+      ai.models.generateContent({ model, contents: prompt })
+    );
 
     return res.status(200).json({
       success: true,
@@ -119,13 +119,7 @@ Rules:
       difficulty,
     });
   } catch (error: any) {
-    console.error("❌ MOCK INTERVIEW START ERROR:", error);
-
-    return res.status(500).json({
-      success: false,
-      message:
-        error?.message || "Failed to start mock interview",
-    });
+    return sendAiError(res, error, "Failed to start mock interview");
   }
 });
 
@@ -186,23 +180,16 @@ Keep the feedback practical and suitable for a placement interview.
 
     console.log("📊 Evaluating mock interview answer...");
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: prompt,
-    });
+    const response = await guard((model) =>
+      ai.models.generateContent({ model, contents: prompt })
+    );
 
     return res.status(200).json({
       success: true,
       evaluation: response.text,
     });
   } catch (error: any) {
-    console.error("❌ MOCK INTERVIEW EVALUATION ERROR:", error);
-
-    return res.status(500).json({
-      success: false,
-      message:
-        error?.message || "Failed to evaluate answer",
-    });
+    return sendAiError(res, error, "Failed to evaluate answer");
   }
 });
 

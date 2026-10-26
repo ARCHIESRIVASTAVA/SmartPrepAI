@@ -1,6 +1,7 @@
 import { Router } from "express";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
+import { guard, isQuotaError } from "../lib/gemini";
 
 dotenv.config();
 
@@ -10,7 +11,6 @@ const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) throw new Error("GEMINI_API_KEY not found in .env");
 
 const ai = new GoogleGenAI({ apiKey });
-const MODEL = "gemini-3.6-flash";
 
 const MAX_TURNS = 12;
 const MAX_CHARS = 2000;
@@ -125,11 +125,9 @@ router.post("/stream", async (req, res) => {
   };
 
   try {
-    const stream = await ai.interactions.create({
-      model: MODEL,
-      input: prompt,
-      stream: true,
-    });
+    const stream = await guard((model) =>
+      ai.interactions.create({ model, input: prompt, stream: true })
+    );
 
     let full = "";
 
@@ -158,7 +156,7 @@ router.post("/stream", async (req, res) => {
 
     send("error", {
       message:
-        status === 429
+        isQuotaError(error)
           ? "Pip is getting a lot of questions right now. Try again in a minute."
           : "Pip couldn't answer that. Please try again.",
     });
