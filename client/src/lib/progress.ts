@@ -265,6 +265,26 @@ export function weakestTopic(
   return { topic: worst, average: worstAvg };
 }
 
+/**
+ * The streak to show. A streak only grows when something is finished,
+ * so it stays "pending" until then; once a full day is missed it is 0.
+ */
+export function streakNow(progress: Progress): {
+  count: number;
+  doneToday: boolean;
+} {
+  if (progress.lastDay === dayKey()) {
+    return { count: progress.streak, doneToday: true };
+  }
+
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  return progress.lastDay === dayKey(yesterday)
+    ? { count: progress.streak, doneToday: false }
+    : { count: 0, doneToday: false };
+}
+
 /** XP earned today (resets at midnight). */
 export function todayXp(progress: Progress): number {
   return progress.dayXpDate === dayKey() ? progress.dayXp : 0;

@@ -3,6 +3,7 @@ import { Pip } from "./Pip";
 import {
   DAILY_GOAL,
   levelInfo,
+  streakNow,
   todayXp,
   useProgress,
 } from "../lib/progress";
@@ -53,12 +54,13 @@ export function Companion({ tab, visible }: Props) {
 
     const due = dueCards(review.cards).length;
     const doneToday = todayXp(progress) > 0;
+    const streak = streakNow(progress).count;
 
     if (due > 0 && tab === "cards") {
       say(`${due} ${due === 1 ? "card is" : "cards are"} waiting for review.`);
-    } else if (progress.streak > 0 && !doneToday) {
+    } else if (streak > 0 && !doneToday) {
       say(
-        `${progress.streak}-day streak. Do one thing today to keep it.`,
+        `${streak}-day streak. Do one thing today to keep it.`,
         "happy"
       );
     } else {

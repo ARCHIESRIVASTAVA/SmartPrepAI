@@ -3,6 +3,7 @@ import { TOPICS } from "../constants";
 import {
   DAILY_GOAL,
   lastDays,
+  streakNow,
   levelInfo,
   todayXp,
   topicAverage,
@@ -19,6 +20,7 @@ export function TodayPanel({ onGo }: Props) {
   const progress = useProgress();
   const review = useReview();
 
+  const streak = streakNow(progress);
   const info = levelInfo(progress.xp);
   const week = lastDays(progress, 7);
   const today = todayXp(progress);
@@ -52,10 +54,18 @@ export function TodayPanel({ onGo }: Props) {
       </div>
 
       <p className="today-streak">
-        {progress.streak > 0
-          ? `${progress.streak}-day streak`
-          : "Start a streak today"}
+        {streak.count === 0
+          ? "Start a streak today"
+          : streak.doneToday
+            ? `${streak.count}-day streak, kept for today`
+            : `${streak.count}-day streak`}
       </p>
+
+      {streak.count > 0 && !streak.doneToday && (
+        <p className="today-streak-note">
+          Finish one activity today to make it {streak.count + 1}.
+        </p>
+      )}
 
       <div className="today-level">
         <div>

@@ -257,6 +257,7 @@
 .day.now i { border-color: var(--accent); }
 
 .today-streak { margin: -4px 0 0; font-weight: 650; }
+.today-streak-note { margin: -6px 0 0; font-size: 0.8rem; color: var(--text-2); }
 
 .today-level { display: grid; gap: 6px; }
 .today-level > div { display: flex; justify-content: space-between; font-size: 12.5px; }

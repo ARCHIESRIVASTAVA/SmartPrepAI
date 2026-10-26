@@ -21,6 +21,7 @@ import {
   levelInfo,
   resetProgress,
   stars,
+  streakNow,
   useProgress,
   weakestTopic,
 } from "../lib/progress";
@@ -128,6 +129,7 @@ export function StageSelect({ serverState, onLaunch, onBack }: Props) {
   const progress = useProgress();
   const review = useReview();
   const dueCount = dueCards(review.cards).length;
+  const streak = streakNow(progress);
   const info = levelInfo(progress.xp);
   const unlocked = bossUnlocked(progress);
   const weak = weakestTopic(progress, TOPICS);
@@ -207,10 +209,10 @@ export function StageSelect({ serverState, onLaunch, onBack }: Props) {
             <span style={{ width: `${info.fraction * 100}%` }} />
           </span>
 
-          {progress.streak > 0 && (
+          {streak.count > 0 && (
             <span className="hud-streak">
               <Flame size={13} aria-hidden="true" />
-              {progress.streak}
+              {streak.count}
             </span>
           )}
         </button>
@@ -380,7 +382,7 @@ export function StageSelect({ serverState, onLaunch, onBack }: Props) {
 
             <ul className="profile-stats">
               <li>{progress.xp} XP</li>
-              <li>{progress.streak} day streak</li>
+              <li>{streak.count} day streak</li>
               <li>{progress.clears.ask} answers</li>
               <li>{progress.clears.mock} mock answers</li>
             </ul>

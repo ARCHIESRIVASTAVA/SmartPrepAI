@@ -1,5 +1,5 @@
 import { TOPICS } from "../constants";
-import { levelInfo, topicAverage, type Progress } from "./progress";
+import { levelInfo, streakNow, topicAverage, type Progress } from "./progress";
 
 /** Draws a 1200x630 progress card and returns it as a PNG blob. */
 export async function makeShareCard(progress: Progress): Promise<Blob | null> {
@@ -53,7 +53,7 @@ export async function makeShareCard(progress: Progress): Promise<Blob | null> {
   g.font = `500 28px ${mono}`;
   g.fillText(`${progress.xp} XP`, 74, 424);
   g.fillText(
-    `${progress.streak} day streak`,
+    `${streakNow(progress).count} day streak`,
     74,
     466
   );
