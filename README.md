@@ -42,6 +42,21 @@ A downloadable daily calendar reminder (.ics) so your streak survives even when 
 
 Progress is stored in the browser (localStorage), not on the server.
 
+🔐 Accounts and cross-device progress
+
+Accounts are optional. Without them the app works as a guest and keeps progress in the browser. With them, XP, streak, stage clears, skill scores, spaced-repetition cards and seen questions are saved to your account and merged across devices, so starting on a phone and continuing on a desktop loses nothing.
+
+Setup (free, about 5 minutes):
+
+1. Create a project at supabase.com.
+2. In SQL Editor, paste and run supabase/schema.sql. It creates one table with Row Level Security, so each user can only read and write their own row.
+3. In Project Settings > API, copy the Project URL and the anon public key.
+4. In Vercel, add environment variables VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, then redeploy. For local work, copy client/.env.example to client/.env.
+5. In Supabase Authentication > URL Configuration, set Site URL to your Vercel address and add it to Redirect URLs.
+6. Optional Google sign-in: enable the Google provider in Supabase, then set VITE_GOOGLE_AUTH=true.
+
+How sync works: changes upload a moment after you make them, and the app pulls again when you return to the tab. Data from both devices is merged rather than overwritten. Signing out clears this device, so a shared computer never shows someone else's progress. Known limit: if two devices earn XP offline at the same time, the larger total wins instead of the sum.
+
 🤖 AI Placement Assistant
 
 Ask questions about DSA, OOP, DBMS, Operating Systems, Computer Networks, SQL and interviews.
