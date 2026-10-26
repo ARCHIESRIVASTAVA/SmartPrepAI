@@ -6,6 +6,7 @@ import {
   type RetrievedChunk,
 } from "../rag/retrieve";
 import { guard, isQuotaError, QUOTA_MESSAGE } from "../lib/gemini";
+import { getAnswer, saveAnswer } from "../lib/answerCache";
 
 dotenv.config();
 
@@ -217,6 +218,18 @@ router.post("/", async (req, res) => {
 
     const question = message.trim();
 
+    // Same question asked recently? Reuse it and skip Gemini entirely.
+    const cached = getAnswer(question);
+    if (cached) {
+      console.log("♻️ Answer served from cache");
+      return res.status(200).json({
+        success: true,
+        rag: cached.sourceType === "study_material",
+        cached: true,
+        ...cached,
+      });
+    }
+
     // 2. Retrieve relevant chunks from Pinecone.
     console.log("🔎 Searching Pinecone...");
 
@@ -392,6 +405,14 @@ ${chunk.text}
     console.log("📌 Source type:", sourceType);
     console.log("====================================");
 
+    saveAnswer(question, {
+      sourceType,
+      reply,
+      sources: sourceType === "study_material" ? sources : [],
+      webSources,
+      retrievedChunks: retrievedChunks.length,
+    });
+
     // 7. Return the response to the frontend.
     return res.status(200).json({
       success: true,
@@ -488,6 +509,31 @@ router.post("/stream", async (req, res) => {
   try {
     console.log("🔥 NEW SMARTPREP STREAM REQUEST:", question);
 
+    // Same question asked recently? Replay it without calling Gemini.
+    const cached = getAnswer(question);
+    if (cached) {
+      console.log("♻️ Stream served from cache");
+
+      send("meta", {
+        sourceType: cached.sourceType,
+        rag: cached.sourceType === "study_material",
+        sources: cached.sources,
+      });
+
+      // Replay in small pieces so it still feels like it is being written.
+      for (let i = 0; i < cached.reply.length && !clientGone; i += 48) {
+        send("token", { text: cached.reply.slice(i, i + 48) });
+        await new Promise((resolve) => setTimeout(resolve, 12));
+      }
+
+      send("done", {
+        webSources: cached.webSources,
+        retrievedChunks: cached.retrievedChunks,
+        cached: true,
+      });
+      return res.end();
+    }
+
     const retrievedChunks = await safeRetrieve(question, 5);
 
     const bestScore = retrievedChunks.reduce(
@@ -504,17 +550,19 @@ router.post("/stream", async (req, res) => {
 
     console.log("🎯 Best retrieval score:", bestScore, "| source:", sourceType);
 
+    const metaSources = useStudyMaterial
+      ? retrievedChunks.map((chunk) => ({
+          source: chunk.source,
+          chunkIndex: chunk.chunkIndex,
+          score: chunk.score,
+          excerpt: makeExcerpt(chunk.text, question),
+        }))
+      : [];
+
     send("meta", {
       sourceType,
       rag: useStudyMaterial,
-      sources: useStudyMaterial
-        ? retrievedChunks.map((chunk) => ({
-            source: chunk.source,
-            chunkIndex: chunk.chunkIndex,
-            score: chunk.score,
-            excerpt: makeExcerpt(chunk.text, question),
-          }))
-        : [],
+      sources: metaSources,
     });
 
     const stream = await guard((model) =>
@@ -568,6 +616,14 @@ router.post("/stream", async (req, res) => {
     }
 
     send("done", {
+      webSources,
+      retrievedChunks: retrievedChunks.length,
+    });
+
+    saveAnswer(question, {
+      sourceType,
+      reply: fullText,
+      sources: metaSources,
       webSources,
       retrievedChunks: retrievedChunks.length,
     });

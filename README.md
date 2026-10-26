@@ -65,6 +65,8 @@ All AI routes share one Gemini key, so the server protects it: at most 4 Gemini 
 - GEMINI_MODEL: override the main model (default gemini-3.6-flash).
 - GEMINI_CONCURRENCY: parallel Gemini calls (default 4).
 
+Repeated Ask questions are answered from a 6-hour in-memory cache (ignoring case and punctuation), so asking the same thing again costs no Gemini calls.
+
 If the daily free quota is used up, the real fix is to enable billing on the Google AI Studio project, which raises the limits.
 
 💬 Pip chatbot
