@@ -583,26 +583,31 @@ Deployed frontend and backend independently using Vercel and Render.
 
 📸 Screenshots
 
-Add screenshots of:
+(Sample content, captured from the running app.)
 
-SmartPrep AI homepage
+Title screen
 
-AI Placement Assistant response
+![Title screen](screenshots/title.png)
 
-RAG sources displayed below an answer
+Stage select
 
-Resume Analyzer
+![Stage select](screenshots/stage-select.png)
 
-Interview Generator
+Ask, with the passages that matched
 
-Recommended folder:
+![Ask with sources](screenshots/ask-sources.png)
 
-screenshots/
-├── home.png
-├── ai-chat.png
-├── rag-sources.png
-├── resume-analyzer.png
-└── interview-generator.png
+Flashcards
+
+![Flashcards](screenshots/flashcards.png)
+
+Quiz blitz
+
+![Quiz blitz](screenshots/quiz-blitz.png)
+
+Pip, the study-buddy chatbot
+
+![Pip chat](screenshots/pip-chat.png)
 
 🔮 Future Improvements
 
