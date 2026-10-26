@@ -7,6 +7,7 @@ import resumeRouter from "./routes/resume";
 import interviewRouter from "./routes/interview";
 import mockInterviewRouter from "./routes/mockInterview";
 import studyRouter from "./routes/study";
+import tutorRouter from "./routes/tutor";
 
 dotenv.config();
 
@@ -38,6 +39,9 @@ app.use("/mock-interview", mockInterviewRouter);
 
 // Flashcards, slides and quiz
 app.use("/study", studyRouter);
+
+// Pip, the study-buddy chatbot
+app.use("/tutor", tutorRouter);
 
 export default app;
 

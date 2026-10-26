@@ -57,6 +57,10 @@ Setup (free, about 5 minutes):
 
 How sync works: changes upload a moment after you make them, and the app pulls again when you return to the tab. Data from both devices is merged rather than overwritten. Signing out clears this device, so a shared computer never shows someone else's progress. Known limit: if two devices earn XP offline at the same time, the larger total wins instead of the sum.
 
+💬 Pip chatbot
+
+A floating chat on every screen (except the title screen and the mock interview, where it would be a cheat sheet). Pip is a general study buddy powered by Gemini: it remembers the conversation, streams replies, and knows which screen you are on and your weakest mock-interview topic. It is separate from the Ask stage, which answers from the placement PDFs. Endpoint: POST /tutor/stream.
+
 🤖 AI Placement Assistant
 
 Ask questions about DSA, OOP, DBMS, Operating Systems, Computer Networks, SQL and interviews.

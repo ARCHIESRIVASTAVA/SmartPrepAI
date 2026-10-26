@@ -11,6 +11,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { API_URL } from "./api";
+import { TutorChat } from "./components/TutorChat";
+import { TOPICS } from "./constants";
+import { levelInfo, useProgress, weakestTopic } from "./lib/progress";
 import { AccountChip } from "./components/AccountChip";
 import { AuthModal } from "./components/AuthModal";
 import { startAuth } from "./lib/cloud";
@@ -55,6 +58,9 @@ function App() {
   useEffect(() => {
     startAuth();
   }, []);
+
+  const progress = useProgress();
+  const weakest = weakestTopic(progress, TOPICS);
 
   const [tab, setTab] = useState<Tab>("ask");
   const [screen, setScreen] = useState<Screen>("title");
@@ -101,6 +107,20 @@ function App() {
     <>
       <RewardLayer />
       <AuthModal />
+
+      <TutorChat
+        // No chatbot on the title screen, and none during the mock
+        // interview, where it would be a cheat sheet.
+        hidden={screen === "title" || (screen === "app" && tab === "mock")}
+        context={{
+          stage:
+            screen === "app"
+              ? NAV_ITEMS.find((item) => item.id === tab)?.label
+              : "stage select",
+          level: levelInfo(progress.xp).level,
+          weak: weakest.average === null ? undefined : weakest.topic,
+        }}
+      />
 
       {screen === "title" && (
         <TitleScreen
