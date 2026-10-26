@@ -1,4 +1,6 @@
 import { useEffect } from "react";
+import { AccountChip } from "../components/AccountChip";
+import { useAuth } from "../lib/cloud";
 import { Pip } from "../components/Pip";
 import type { ServerState } from "../types";
 
@@ -15,8 +17,12 @@ type Props = {
 };
 
 export function TitleScreen({ serverState, onStart }: Props) {
+  const { modalOpen } = useAuth();
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      const tag = (event.target as HTMLElement | null)?.tagName;
+      if (modalOpen || tag === "INPUT" || tag === "BUTTON") return;
+
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         onStart();
@@ -25,7 +31,7 @@ export function TitleScreen({ serverState, onStart }: Props) {
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onStart]);
+  }, [onStart, modalOpen]);
 
   const loading = serverState === "checking" || serverState === "waking";
 
@@ -38,6 +44,13 @@ export function TitleScreen({ serverState, onStart }: Props) {
       <div className="fx-grid" aria-hidden="true" />
       <div className="fx-glow" aria-hidden="true" />
       <div className="fx-scan" aria-hidden="true" />
+
+      <div
+        className="title-account"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <AccountChip />
+      </div>
 
       <div className="title-center">
         <div className="title-pip">

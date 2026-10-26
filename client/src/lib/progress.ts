@@ -53,19 +53,61 @@ const EMPTY: Progress = {
 const dayKey = (date = new Date()) =>
   `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
 
+const num = (value: unknown) =>
+  typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? value
+    : 0;
+
+/** Turns untrusted saved or downloaded data into a valid Progress. */
+export function sanitizeProgress(raw: unknown): Progress {
+  const saved = (raw && typeof raw === "object" ? raw : {}) as Record<
+    string,
+    unknown
+  >;
+
+  const clears = { ...EMPTY.clears };
+  const savedClears = (saved.clears ?? {}) as Record<string, unknown>;
+  (Object.keys(clears) as Tab[]).forEach((key) => {
+    clears[key] = num(savedClears[key]);
+  });
+
+  const topics: Record<string, TopicStat> = {};
+  const savedTopics = (saved.topics ?? {}) as Record<string, TopicStat>;
+  Object.keys(savedTopics)
+    .slice(0, 50)
+    .forEach((name) => {
+      const stat = savedTopics[name];
+      if (stat && num(stat.count) > 0) {
+        topics[name.slice(0, 60)] = {
+          total: num(stat.total),
+          count: num(stat.count),
+        };
+      }
+    });
+
+  return {
+    xp: num(saved.xp),
+    streak: num(saved.streak),
+    lastDay: typeof saved.lastDay === "string" ? saved.lastDay.slice(0, 12) : "",
+    clears,
+    topics,
+    resume: typeof saved.resume === "string" ? saved.resume.slice(0, 3000) : "",
+    dayXp: num(saved.dayXp),
+    dayXpDate:
+      typeof saved.dayXpDate === "string" ? saved.dayXpDate.slice(0, 12) : "",
+    days: Array.isArray(saved.days)
+      ? saved.days
+          .filter((d): d is string => typeof d === "string")
+          .map((d) => d.slice(0, 12))
+          .slice(-60)
+      : [],
+  };
+}
+
 function load(): Progress {
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return EMPTY;
-
-    const saved = JSON.parse(raw) as Partial<Progress>;
-
-    return {
-      ...EMPTY,
-      ...saved,
-      clears: { ...EMPTY.clears, ...saved.clears },
-      topics: { ...saved.topics },
-    };
+    return raw ? sanitizeProgress(JSON.parse(raw)) : EMPTY;
   } catch {
     return EMPTY;
   }
@@ -247,4 +289,20 @@ export function lastDays(progress: Progress, count = 7) {
   }
 
   return out;
+}
+
+// ---------------- sync hooks ----------------
+
+export const getProgress = () => state;
+
+/** Replaces the whole state, for example with merged cloud data. */
+export function replaceProgress(next: Progress) {
+  commit(sanitizeProgress(next));
+}
+
+export function subscribeProgress(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }

@@ -11,6 +11,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { API_URL } from "./api";
+import { AccountChip } from "./components/AccountChip";
+import { AuthModal } from "./components/AuthModal";
+import { startAuth } from "./lib/cloud";
 import { AmbientBackground } from "./components/AmbientBackground";
 import { Companion } from "./components/Companion";
 import { ReminderButton } from "./components/ReminderButton";
@@ -49,6 +52,10 @@ const SERVER_LABELS: Record<ServerState, string> = {
 };
 
 function App() {
+  useEffect(() => {
+    startAuth();
+  }, []);
+
   const [tab, setTab] = useState<Tab>("ask");
   const [screen, setScreen] = useState<Screen>("title");
 
@@ -93,6 +100,7 @@ function App() {
   return (
     <>
       <RewardLayer />
+      <AuthModal />
 
       {screen === "title" && (
         <TitleScreen
@@ -147,6 +155,8 @@ function App() {
         <Companion tab={tab} visible={screen === "app"} />
 
         <ReminderButton />
+
+        <AccountChip className="rail-account" />
 
         <div className="rail-footer" role="status">
           <span

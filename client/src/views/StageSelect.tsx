@@ -12,6 +12,8 @@ import {
   Mic,
   type LucideIcon,
 } from "lucide-react";
+import { AccountChip } from "../components/AccountChip";
+import { useAuth } from "../lib/cloud";
 import { SkillRadar } from "../components/SkillRadar";
 import { TOPICS } from "../constants";
 import {
@@ -122,6 +124,7 @@ export function StageSelect({ serverState, onLaunch, onBack }: Props) {
   const [launching, setLaunching] = useState<Tab | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
 
+  const { status, modalOpen } = useAuth();
   const progress = useProgress();
   const review = useReview();
   const dueCount = dueCards(review.cards).length;
@@ -141,7 +144,7 @@ export function StageSelect({ serverState, onLaunch, onBack }: Props) {
   };
 
   useEffect(() => {
-    if (launching) return;
+    if (launching || modalOpen) return;
 
     const onKey = (event: KeyboardEvent) => {
       if (profileOpen) {
@@ -211,6 +214,8 @@ export function StageSelect({ serverState, onLaunch, onBack }: Props) {
             </span>
           )}
         </button>
+
+        <AccountChip />
 
         <span className="map-status">
           <span
@@ -412,7 +417,11 @@ export function StageSelect({ serverState, onLaunch, onBack }: Props) {
             </div>
 
             <p className="profile-note">
-              Progress is saved in this browser only.
+              {status === "in"
+                ? "Progress is saved to your account and syncs across devices."
+                : status === "out"
+                  ? "Progress is saved in this browser. Sign in to keep it across devices."
+                  : "Progress is saved in this browser only."}
             </p>
           </div>
         </div>

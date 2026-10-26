@@ -34,17 +34,48 @@ const MAX_CARDS = 300;
 export const cardId = (topic: string, q: string) =>
   `${topic.trim().toLowerCase()}|${q.trim().toLowerCase()}`;
 
+/** Turns untrusted saved or downloaded data into a valid ReviewState. */
+export function sanitizeReview(raw: unknown): ReviewState {
+  const saved = (raw && typeof raw === "object" ? raw : {}) as Record<
+    string,
+    unknown
+  >;
+
+  const cards: ReviewCard[] = [];
+  if (Array.isArray(saved.cards)) {
+    for (const item of saved.cards.slice(0, MAX_CARDS)) {
+      const c = item as Partial<ReviewCard> | null;
+      if (
+        c &&
+        typeof c.id === "string" &&
+        typeof c.q === "string" &&
+        typeof c.a === "string" &&
+        typeof c.due === "number" &&
+        Number.isFinite(c.due)
+      ) {
+        cards.push({
+          id: c.id.slice(0, 400),
+          q: c.q.slice(0, 600),
+          a: c.a.slice(0, 1200),
+          topic: typeof c.topic === "string" ? c.topic.slice(0, 60) : "General",
+          box: Math.min(MAX_BOX, Math.max(1, Math.round(Number(c.box) || 1))),
+          due: c.due,
+        });
+      }
+    }
+  }
+
+  const mastered = Number(saved.mastered);
+  return {
+    cards,
+    mastered: Number.isFinite(mastered) && mastered > 0 ? Math.floor(mastered) : 0,
+  };
+}
+
 function load(): ReviewState {
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return { cards: [], mastered: 0 };
-
-    const saved = JSON.parse(raw) as Partial<ReviewState>;
-
-    return {
-      cards: Array.isArray(saved.cards) ? saved.cards : [],
-      mastered: Number(saved.mastered) || 0,
-    };
+    return sanitizeReview(raw ? JSON.parse(raw) : null);
   } catch {
     return { cards: [], mastered: 0 };
   }
@@ -154,4 +185,19 @@ export function recordReview(card: Flashcard, knew: boolean, now = Date.now()) {
 
 export function clearReview() {
   commit({ cards: [], mastered: 0 });
+}
+
+// ---------------- sync hooks ----------------
+
+export const getReview = () => state;
+
+export function replaceReview(next: ReviewState) {
+  commit(sanitizeReview(next));
+}
+
+export function subscribeReview(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }
