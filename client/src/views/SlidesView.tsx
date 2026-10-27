@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Download, LoaderCircle } from "lucide-react";
 import { ErrorNote } from "../components/ErrorNote";
 import { TopicPicker } from "../components/TopicPicker";
-import { award } from "../lib/progress";
+import { award, markActive } from "../lib/progress";
 import { studyRequest, type Slide } from "../lib/study";
 
 type Props = { active: boolean };
@@ -19,6 +19,7 @@ export function SlidesView({ active }: Props) {
   const slide = slides[index];
 
   const generate = async () => {
+    markActive();
     setBusy(true);
     setError("");
 

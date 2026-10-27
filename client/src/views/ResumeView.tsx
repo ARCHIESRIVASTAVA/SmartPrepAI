@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FileUp, LoaderCircle } from "lucide-react";
 import { API_URL } from "../api";
-import { award, XP } from "../lib/progress";
+import { award, markActive, XP } from "../lib/progress";
 import { ErrorNote } from "../components/ErrorNote";
 import { ResultPanel } from "../components/ResultPanel";
 
@@ -15,6 +15,7 @@ export function ResumeView() {
 
   const analyzeResume = async () => {
     if (!resume) return;
+    markActive();
 
     setResumeLoading(true);
     setAnalysis("");

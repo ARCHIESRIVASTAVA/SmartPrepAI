@@ -7,7 +7,7 @@ import { Segmented } from "../components/Segmented";
 import { WeakSpot } from "../components/WeakSpot";
 import { DIFFICULTIES, TOPICS } from "../constants";
 import { formatAIResponse } from "../lib/format";
-import { award, useProgress } from "../lib/progress";
+import { award, markActive, useProgress } from "../lib/progress";
 import { canListen, canSpeak, speak, useDictation } from "../lib/voice";
 import {
   friendlyError,
@@ -61,6 +61,7 @@ export function MockInterviewView() {
   const startMockQuestion = async (
     rounds: MockRound[] = mockHistory
   ) => {
+    markActive();
     setMockBusy("start");
     setMockError("");
 

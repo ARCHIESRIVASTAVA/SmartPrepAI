@@ -10,7 +10,7 @@ import {
 import { CopyButton } from "../components/CopyButton";
 import { ErrorNote } from "../components/ErrorNote";
 import { formatAIResponse } from "../lib/format";
-import { award, XP } from "../lib/progress";
+import { award, markActive, XP } from "../lib/progress";
 import { highlightTerms, hostOf, prettySource } from "../lib/sources";
 
 const EXAMPLE_QUESTIONS = [
@@ -38,6 +38,7 @@ export function AskView() {
 
   const sendMessage = async () => {
     if (!message.trim()) return;
+    markActive();
 
     setChatLoading(true);
     setAskedQuestion(message.trim());

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { LoaderCircle } from "lucide-react";
 import { API_URL } from "../api";
-import { award, XP } from "../lib/progress";
+import { award, markActive, XP } from "../lib/progress";
 import { ErrorNote } from "../components/ErrorNote";
 import { ResultPanel } from "../components/ResultPanel";
 import { Segmented } from "../components/Segmented";
@@ -21,6 +21,7 @@ export function InterviewView() {
   const [interviewError, setInterviewError] = useState("");
 
   const generateInterview = async () => {
+    markActive();
     setInterviewLoading(true);
     setQuestions("");
     setInterviewError("");

@@ -233,6 +233,24 @@ export function award(
   }
 }
 
+/**
+ * Counts today for the streak without giving XP. Called when someone
+ * starts an activity, so a slow or rate-limited AI reply can't cost
+ * them their streak.
+ */
+export function markActive() {
+  const today = dayKey();
+  if (state.lastDay === today) return;
+
+  commit({
+    ...state,
+    ...withStreak(state),
+    days: state.days.includes(today)
+      ? state.days
+      : [...state.days, today].slice(-60),
+  });
+}
+
 export function resetProgress() {
   commit(EMPTY);
 }

@@ -3,7 +3,7 @@ import { LoaderCircle } from "lucide-react";
 import { ErrorNote } from "../components/ErrorNote";
 import { Segmented } from "../components/Segmented";
 import { TopicPicker } from "../components/TopicPicker";
-import { award } from "../lib/progress";
+import { award, markActive } from "../lib/progress";
 import { addSeen, getSeen } from "../lib/seen";
 import { emit, ENCOURAGEMENTS, pick } from "../lib/rewards";
 import {
@@ -63,6 +63,7 @@ export function FlashcardsView({ active }: Props) {
   };
 
   const generate = async () => {
+    markActive();
     setBusy(true);
     setError("");
 

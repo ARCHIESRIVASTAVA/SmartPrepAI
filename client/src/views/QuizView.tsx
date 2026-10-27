@@ -4,7 +4,7 @@ import { ErrorNote } from "../components/ErrorNote";
 import { Segmented } from "../components/Segmented";
 import { TopicPicker } from "../components/TopicPicker";
 import { DIFFICULTIES } from "../constants";
-import { award } from "../lib/progress";
+import { award, markActive } from "../lib/progress";
 import { addSeen, getSeen } from "../lib/seen";
 import { CHEERS, emit, ENCOURAGEMENTS, pick } from "../lib/rewards";
 import { studyRequest, type QuizQuestion } from "../lib/study";
@@ -49,6 +49,7 @@ export function QuizView({ active }: Props) {
   };
 
   const start = async () => {
+    markActive();
     setBusy(true);
     setError("");
 
